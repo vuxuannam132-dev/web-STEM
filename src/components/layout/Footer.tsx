@@ -1,0 +1,31 @@
+import React from 'react'
+import Image from 'next/image'
+
+export default function Footer() {
+  return (
+    <footer className="mt-20">
+      <div className="glass-card rounded-t-3xl border-b-0 py-12 px-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <Image
+              src="/logo1.jpg"
+              alt="Logo THPT Đoàn Kết"
+              width={56}
+              height={56}
+              className="rounded-full"
+            />
+            <div>
+              <h3 className="text-white font-bold text-lg">THPT Đoàn Kết-Hai Bà Trưng</h3>
+              <p className="text-white/60 text-sm">Website giới thiệu sản phẩm STEM của học sinh</p>
+            </div>
+          </div>
+          <div className="text-center md:text-right">
+            <p className="text-white/50 text-sm">
+              © 2026 Copyright by Vũ Xuân Nam. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}

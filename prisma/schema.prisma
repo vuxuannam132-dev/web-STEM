@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("USER") // USER | ADMIN
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  aiQueryCount    Int       @default(0)
+  lastAiQueryDate DateTime?
+  products        Product[]
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  description      String
+  images           String   @default("[]") // JSON array of image paths
+  authors          String   @default("[]") // JSON array of author names
+  teachers         String   @default("[]") // JSON array of teacher names
+  appliedKnowledge String   @default("[]") // JSON array
+  components       String   @default("[]") // JSON array
+  category         String   // TOAN_LY_TIN | XA_HOI | NGOAI_NGU_THE_DUC_GDQP | KHOA_HOC_STEM
+  tags             String   @default("[]") // JSON array
+  visibility       String   @default("PUBLIC") // PUBLIC | PRIVATE | ADMIN_ONLY
+  status           String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  rejectionReason  String?
+  viewCount        Int      @default(0)
+  qrForeground     String   @default("#1e40af")
+  qrBackground     String   @default("#ffffff")
+  qrCornerStyle    String   @default("square")
+  qrDotStyle       String   @default("square")
+  qrFrameText      String?
+  ownerId          String
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
