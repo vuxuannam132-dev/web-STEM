@@ -34,18 +34,7 @@ export default function Navbar() {
   return (
     <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-7xl">
       <div className="glass-nav rounded-full px-4 md:px-6 py-3 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Image
-            src="/logo1.jpg"
-            alt="Logo THPT Đoàn Kết"
-            width={40}
-            height={40}
-            className="rounded-full"
-            style={{ width: 'auto', height: 'auto' }}
-          />
-          <span className="hidden lg:block text-slate-800 font-bold text-sm">STEM Đoàn Kết</span>
-        </Link>
+        {/* Removed Logo per user request */}
 
         {/* Desktop Menu */}
         <div className="hidden lg:flex items-center gap-1">

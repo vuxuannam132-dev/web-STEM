@@ -14,6 +14,18 @@ export default function HomePage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [ieltsConfig, setIeltsConfig] = useState({ show: false, url: '' })
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.show_ielts_link === 'true' && data.ielts_link_url) {
+          setIeltsConfig({ show: true, url: data.ielts_link_url })
+        }
+      })
+      .catch(console.error)
+  }, [])
 
   // Debounce search
   useEffect(() => {
@@ -76,12 +88,14 @@ export default function HomePage() {
                 Đăng sản phẩm
               </GlassButton>
             </Link>
-            <a href="http://localhost:3001" target="_blank" rel="noopener noreferrer">
-              <GlassButton variant="secondary" size="lg" className="gap-2 !bg-gradient-to-r !from-emerald-500 !to-teal-600 !text-white !border-emerald-400/30 hover:!shadow-lg hover:!shadow-emerald-500/25">
-                <BookOpen className="w-5 h-5" />
-                Luyện IELTS ngay
-              </GlassButton>
-            </a>
+            {ieltsConfig.show && (
+              <a href={ieltsConfig.url} target="_blank" rel="noopener noreferrer">
+                <GlassButton variant="secondary" size="lg" className="gap-2 !bg-gradient-to-r !from-emerald-500 !to-teal-600 !text-white !border-emerald-400/30 hover:!shadow-lg hover:!shadow-emerald-500/25">
+                  <BookOpen className="w-5 h-5" />
+                  Luyện IELTS ngay
+                </GlassButton>
+              </a>
+            )}
           </div>
         </div>
       </section>
