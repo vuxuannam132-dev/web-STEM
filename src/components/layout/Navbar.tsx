@@ -18,6 +18,18 @@ export default function Navbar() {
   const { user, loading, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [ieltsConfig, setIeltsConfig] = useState({ show: false, url: '' })
+
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.show_ielts_link === 'true' && data.ielts_link_url) {
+          setIeltsConfig({ show: true, url: data.ielts_link_url })
+        }
+      })
+      .catch(console.error)
+  }, [])
 
   return (
     <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-7xl">
@@ -51,15 +63,17 @@ export default function Navbar() {
         {/* Right side */}
         <div className="flex items-center gap-2">
           {/* IELTS Button */}
-          <a
-            href="http://localhost:3001"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-md hover:shadow-emerald-500/20 transition-all"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            IELTS
-          </a>
+          {ieltsConfig.show && (
+            <a
+              href={ieltsConfig.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-md hover:shadow-emerald-500/20 transition-all"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              IELTS
+            </a>
+          )}
 
           {loading ? (
             <div className="w-8 h-8 rounded-full bg-slate-100 animate-pulse" />
@@ -142,15 +156,18 @@ export default function Navbar() {
               {item.label}
             </Link>
           ))}
-          <a
-            href="http://localhost:3001"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block px-4 py-3 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-all text-sm font-medium"
-            onClick={() => setMobileOpen(false)}
-          >
-            🌍 Luyện IELTS ngay
-          </a>
+          {ieltsConfig.show && (
+            <a
+              href={ieltsConfig.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-emerald-600 hover:bg-emerald-50 text-sm font-medium"
+              onClick={() => setMobileOpen(false)}
+            >
+              <BookOpen className="w-5 h-5" />
+              Luyện thi IELTS
+            </a>
+          )}
           {!user && (
             <div className="mt-2 pt-2 border-t border-slate-100 flex gap-2">
               <Link

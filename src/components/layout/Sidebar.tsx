@@ -24,6 +24,7 @@ const userItems: SidebarItem[] = [
 const adminItems: SidebarItem[] = [
   { href: '/admin', label: 'Thống kê', icon: <LayoutDashboard className="w-5 h-5" /> },
   { href: '/admin/products', label: 'Quản lý sản phẩm', icon: <FileText className="w-5 h-5" /> },
+  { href: '/admin/settings', label: 'Cài đặt', icon: <Settings className="w-5 h-5" /> },
 ]
 
 export default function Sidebar({ items, type = 'user' }: SidebarProps) {
