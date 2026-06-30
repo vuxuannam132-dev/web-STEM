@@ -6,6 +6,7 @@ import Footer from '@/components/layout/Footer'
 import { AuthProvider } from '@/hooks/useAuth'
 import AiChatWidget from '@/components/ai/AiChatWidget'
 import BugReportWidget from '@/components/ui/BugReportWidget'
+import VerifyPromptModal from '@/components/ui/VerifyPromptModal'
 import './globals.css'
 
 const inter = Inter({ 
@@ -59,6 +60,7 @@ export default function RootLayout({
           <Footer />
           <AiChatWidget />
           <BugReportWidget />
+          <VerifyPromptModal />
         </AuthProvider>
       </body>
     </html>
