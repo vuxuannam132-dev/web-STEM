@@ -5,6 +5,7 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { AuthProvider } from '@/hooks/useAuth'
 import AiChatWidget from '@/components/ai/AiChatWidget'
+import BugReportWidget from '@/components/ui/BugReportWidget'
 import './globals.css'
 
 const inter = Inter({ 
@@ -57,6 +58,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <AiChatWidget />
+          <BugReportWidget />
         </AuthProvider>
       </body>
     </html>

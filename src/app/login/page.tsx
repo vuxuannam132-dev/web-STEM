@@ -31,6 +31,11 @@ export default function LoginPage() {
       })
       const data = await res.json()
 
+      if (data.error === 'not_verified') {
+        router.push(`/verify?email=${encodeURIComponent(email)}`)
+        return
+      }
+
       if (data.error) {
         setError(data.error)
         return
@@ -83,6 +88,11 @@ export default function LoginPage() {
             required
             showPasswordToggle
           />
+          <div className="flex justify-end mt-1">
+            <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 transition-colors">
+              Quên mật khẩu?
+            </Link>
+          </div>
 
           {error && (
             <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-red-700 text-sm">

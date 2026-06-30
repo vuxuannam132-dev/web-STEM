@@ -25,12 +25,23 @@ export async function POST(request: Request) {
       )
     }
 
+    if (user.isLocked) {
+      return NextResponse.json(
+        { error: 'Tài khoản đã bị khóa - bạn không thể sử dụng được vui lòng liên hệ admin để mở lại' },
+        { status: 403 }
+      )
+    }
+
     const valid = await verifyPassword(password, user.passwordHash)
     if (!valid) {
       return NextResponse.json(
         { error: 'Email hoặc mật khẩu không đúng' },
         { status: 401 }
       )
+    }
+
+    if (!user.isVerified) {
+      return NextResponse.json({ error: 'not_verified', email: user.email }, { status: 403 })
     }
 
     const token = await signToken({

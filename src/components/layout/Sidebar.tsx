@@ -3,7 +3,10 @@
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Plus, FileText, Settings } from 'lucide-react'
+import { 
+  LayoutDashboard, FileText, Settings, User, 
+  LogOut, Menu, X, PlusCircle, Bookmark, Compass, Activity, Plus
+} from 'lucide-react'
 
 interface SidebarItem {
   href: string
@@ -24,6 +27,8 @@ const userItems: SidebarItem[] = [
 const adminItems: SidebarItem[] = [
   { href: '/admin', label: 'Thống kê', icon: <LayoutDashboard className="w-5 h-5" /> },
   { href: '/admin/products', label: 'Quản lý sản phẩm', icon: <FileText className="w-5 h-5" /> },
+  { href: '/admin/users', label: 'Người dùng', icon: <User className="w-5 h-5" /> },
+  { href: '/admin/logs', label: 'Nhật ký hệ thống', icon: <Activity className="w-5 h-5" /> },
   { href: '/admin/settings', label: 'Cài đặt', icon: <Settings className="w-5 h-5" /> },
 ]
 

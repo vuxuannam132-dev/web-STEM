@@ -13,12 +13,27 @@ model User {
   name         String
   email        String    @unique
   passwordHash String
-  role         String    @default("USER") // USER | ADMIN
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  aiQueryCount    Int       @default(0)
+  role           String    @default("USER") // USER | ADMIN
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  aiQueryCount   Int       @default(0)
   lastAiQueryDate DateTime?
-  products        Product[]
+  products       Product[]
+  
+  isVerified     Boolean   @default(false)
+  verifyCode     String?
+  verifyExpiry   DateTime?
+  resetToken     String?
+  resetExpiry    DateTime?
+  isLocked       Boolean   @default(false)
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  type      String   // e.g. ACCOUNT, POST, SECURITY, BUG
+  message   String
+  userId    String?
+  createdAt DateTime @default(now())
 }
 
 model Product {
