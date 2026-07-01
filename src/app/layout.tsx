@@ -7,6 +7,7 @@ import { AuthProvider } from '@/hooks/useAuth'
 import AiChatWidget from '@/components/ai/AiChatWidget'
 import BugReportWidget from '@/components/ui/BugReportWidget'
 import VerifyPromptModal from '@/components/ui/VerifyPromptModal'
+import GlobalSessionSync from '@/components/ui/GlobalSessionSync'
 import './globals.css'
 
 const inter = Inter({ 
@@ -61,6 +62,7 @@ export default function RootLayout({
           <AiChatWidget />
           <BugReportWidget />
           <VerifyPromptModal />
+          <GlobalSessionSync />
         </AuthProvider>
       </body>
     </html>
