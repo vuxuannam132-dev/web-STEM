@@ -12,10 +12,10 @@ export const registerSchema = z.object({
 })
 
 export const productSchema = z.object({
-  title: z.string().min(1, 'Tên sản phẩm không được để trống').max(200),
-  description: z.string().min(1, 'Mô tả không được để trống'),
-  authors: z.array(z.string()).default([]),
-  teachers: z.array(z.string()).default([]),
+  title: z.string().min(3, 'Tên sản phẩm tối thiểu 3 ký tự').max(200),
+  description: z.string().min(10, 'Mô tả tối thiểu 10 ký tự'),
+  authors: z.array(z.string().min(1)).min(1, 'Cần ít nhất 1 người thực hiện'),
+  teachers: z.array(z.string().min(1)).min(1, 'Cần ít nhất 1 giáo viên hướng dẫn'),
   appliedKnowledge: z.array(z.string()).default([]),
   components: z.array(z.string()).default([]),
   category: z.enum(['TOAN_LY_TIN', 'XA_HOI', 'NGOAI_NGU_THE_DUC_GDQP', 'KHOA_HOC_STEM']),
