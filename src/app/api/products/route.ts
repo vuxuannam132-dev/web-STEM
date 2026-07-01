@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (!status) {
       where.status = 'APPROVED'
       where.visibility = 'PUBLIC'
-    } else {
+    } else if (status !== 'ALL') {
       where.status = status
     }
 
