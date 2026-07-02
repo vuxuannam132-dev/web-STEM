@@ -81,7 +81,7 @@ export default function AdminProductDetailPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/api/qr/${product.slug}`} alt="QR" className="w-32 h-32" />
             </div>
-            <a href={`/api/qr/${product.slug}?download=1`} download className="block mt-3">
+            <a href={`/api/qr/${product.slug}?type=card&download=1`} download className="block mt-3">
               <GlassButton variant="secondary" size="sm">Tải QR</GlassButton>
             </a>
           </GlassCard>

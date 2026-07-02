@@ -179,7 +179,7 @@ export default function DashboardPage() {
               <img src={`/api/qr/${qrProduct.slug}`} alt="QR" className="w-48 h-48" />
             </div>
             <p className="text-slate-600 text-sm text-center">{qrProduct.title}</p>
-            <a href={`/api/qr/${qrProduct.slug}?download=1`} download={`qr-${qrProduct.slug}.png`}>
+            <a href={`/api/qr/${qrProduct.slug}?type=card&download=1`} download={`qr-${qrProduct.slug}.png`}>
               <GlassButton variant="primary" size="sm">Tải QR về máy</GlassButton>
             </a>
           </div>
