@@ -50,6 +50,18 @@ export async function PATCH(request: Request) {
       }
     })
 
+    if (!isLocked) {
+      await prisma.activityLog.updateMany({
+        where: {
+          userId: user.id,
+          type: 'UNLOCK_REQUEST'
+        },
+        data: {
+          type: 'UNLOCK_REQUEST_RESOLVED'
+        }
+      })
+    }
+
     return NextResponse.json({ success: true, user })
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
