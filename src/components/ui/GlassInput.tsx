@@ -15,6 +15,7 @@ interface GlassInputProps {
   required?: boolean
   disabled?: boolean
   showPasswordToggle?: boolean
+  maxLength?: number
 }
 
 export default function GlassInput({
