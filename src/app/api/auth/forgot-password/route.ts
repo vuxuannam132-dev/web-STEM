@@ -26,10 +26,11 @@ export async function POST(request: Request) {
       data: { resetToken: otp, resetExpiry: expiry }
     })
 
+    const { generateForgotPasswordEmail } = await import('@/lib/email-templates')
     await sendMail({
       to: email,
-      subject: "Mã khôi phục mật khẩu",
-      html: `<p>Xin chào ${user.name},</p><p>Mã khôi phục mật khẩu của bạn là: <strong>${otp}</strong></p><p>Mã này sẽ hết hạn sau 15 phút.</p>`
+      subject: "Mã khôi phục mật khẩu - STEM Đoàn Kết",
+      html: generateForgotPasswordEmail(user.name, otp)
     })
 
     // Ghi log hoạt động

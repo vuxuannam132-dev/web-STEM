@@ -51,10 +51,11 @@ export async function POST(request: Request) {
     })
 
     // Send OTP email
+    const { generateRegistrationEmail } = await import('@/lib/email-templates')
     await sendMail({
       to: email,
-      subject: 'Mã xác nhận đăng ký tài khoản',
-      html: `<p>Xin chào ${name},</p><p>Mã xác nhận của bạn là: <strong>${otp}</strong></p><p>Mã này sẽ hết hạn sau 15 phút.</p>`,
+      subject: 'Mã xác nhận đăng ký tài khoản - STEM Đoàn Kết',
+      html: generateRegistrationEmail(name, otp),
     })
 
     await sendTelegramMessage(`🚨 <b>New Registration</b>\nName: ${name}\nEmail: ${email}`)

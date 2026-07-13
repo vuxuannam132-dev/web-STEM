@@ -103,10 +103,11 @@ export async function POST(request: Request) {
         // Optionally Send OTP via Email (if configured)
         try {
           const { sendMail } = await import('@/lib/mailer')
+          const { generateAdmin2FAEmail } = await import('@/lib/email-templates')
           await sendMail({
             to: user.email,
-            subject: 'Mã Xác Minh Đăng Nhập Admin',
-            html: `<h3>Mã xác minh của bạn là: <b>${otp}</b></h3><p>Mã này có hiệu lực trong 20 phút. Vui lòng không chia sẻ cho bất kỳ ai.</p>`
+            subject: '🚨 [BẢO MẬT] Mã Xác Minh Đăng Nhập Quản Trị Viên',
+            html: generateAdmin2FAEmail(user.name, otp, ip, readableDevice, timeStr)
           })
         } catch (e) {}
 

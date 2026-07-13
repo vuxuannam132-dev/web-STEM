@@ -28,18 +28,11 @@ export async function POST(request: Request) {
       data: { verifyCode: otp, verifyExpiry: expiry }
     })
 
+    const { generateRegistrationEmail } = await import('@/lib/email-templates')
     await sendMail({
       to: email,
-      subject: 'Mã xác nhận tài khoản',
-      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">
-        <h2 style="color:#2563eb">Xác nhận tài khoản</h2>
-        <p>Xin chào <strong>${user.name}</strong>,</p>
-        <p>Mã xác nhận của bạn là:</p>
-        <div style="text-align:center;margin:24px 0">
-          <span style="font-size:32px;font-weight:bold;letter-spacing:8px;background:#f1f5f9;padding:12px 24px;border-radius:12px">${otp}</span>
-        </div>
-        <p style="color:#64748b;font-size:14px">Mã này sẽ hết hạn sau 15 phút.</p>
-      </div>`
+      subject: 'Mã xác nhận tài khoản - STEM Đoàn Kết',
+      html: generateRegistrationEmail(user.name, otp)
     })
 
     return NextResponse.json({ success: true })
