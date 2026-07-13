@@ -63,6 +63,33 @@ export async function middleware(request: NextRequest) {
              request.headers.get('x-real-ip') || 
              'unknown'
 
+  // ========== Global Device Ban Check ==========
+  // Skip check for webhook, check-ban API, and the banned page itself
+  if (!pathname.startsWith('/banned') && 
+      !pathname.startsWith('/api/webhook') && 
+      !pathname.startsWith('/api/auth/check-ban')) {
+    
+    const deviceId = request.cookies.get('device_id')?.value
+    if (deviceId) {
+      try {
+        const banRes = await fetch(`${request.nextUrl.origin}/api/auth/check-ban`, { next: { revalidate: 15 } })
+        if (banRes.ok) {
+          const data = await banRes.json()
+          if (Array.isArray(data.blocked) && data.blocked.includes(deviceId)) {
+            // If it's an API request, return 403
+            if (pathname.startsWith('/api/')) {
+              return NextResponse.json({ error: 'Thiết bị của bạn đã bị chặn vĩnh viễn.' }, { status: 403 })
+            }
+            // Otherwise redirect to /banned
+            return NextResponse.redirect(new URL('/banned', request.url))
+          }
+        }
+      } catch (e) {
+        // Fallback silently if fetch fails
+      }
+    }
+  }
+
   // ========== Anti-Bot: Block suspicious user agents ==========
   const ua = request.headers.get('user-agent') || ''
   const botPatterns = /bot|crawler|spider|scraper|curl|wget|python-requests|go-http|java\/|php\//i
@@ -75,57 +102,37 @@ export async function middleware(request: NextRequest) {
 
   // ========== Rate Limiting for API routes ==========
   if (pathname.startsWith('/api/')) {
-    // Stricter rate limit for auth endpoints
     if (pathname.startsWith('/api/auth/')) {
       if (isAuthRateLimited(ip)) {
-        return NextResponse.json(
-          { error: 'Quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.' },
-          { status: 429 }
-        )
+        return NextResponse.json({ error: 'Quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.' }, { status: 429 })
       }
     }
-
-    // General rate limit for all API
     if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: 'Quá nhiều yêu cầu. Vui lòng thử lại sau.' },
-        { status: 429 }
-      )
+      return NextResponse.json({ error: 'Quá nhiều yêu cầu. Vui lòng thử lại sau.' }, { status: 429 })
     }
   }
 
   // ========== Protect dashboard routes ==========
   if (pathname.startsWith('/dashboard')) {
     const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-    try {
-      await jwtVerify(token, JWT_SECRET)
-    } catch {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
+    if (!token) return NextResponse.redirect(new URL('/login', request.url))
+    try { await jwtVerify(token, JWT_SECRET) } 
+    catch { return NextResponse.redirect(new URL('/login', request.url)) }
   }
 
   // ========== Protect admin routes ==========
   if (pathname.startsWith('/admin')) {
     const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
+    if (!token) return NextResponse.redirect(new URL('/login', request.url))
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET)
-      if (payload.role !== 'ADMIN') {
-        return NextResponse.redirect(new URL('/', request.url))
-      }
-    } catch {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
+      if (payload.role !== 'ADMIN') return NextResponse.redirect(new URL('/', request.url))
+    } catch { return NextResponse.redirect(new URL('/login', request.url)) }
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/api/:path*'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|images|favicon).*)'],
 }
