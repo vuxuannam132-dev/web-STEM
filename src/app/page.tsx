@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Sparkles, Rocket, BookOpen } from 'lucide-react'
 import GlassButton from '@/components/ui/GlassButton'
 import SearchFilter from '@/components/products/SearchFilter'
@@ -63,6 +64,15 @@ export default function HomePage() {
 
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="animate-hero-text">
+            <div className="flex justify-center mb-6">
+              <Image 
+                src="/logo1.jpg"
+                alt="Logo THPT Đoàn Kết"
+                width={80}
+                height={80}
+                className="rounded-full shadow-2xl shadow-blue-500/20"
+              />
+            </div>
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white via-blue-200 to-violet-200 bg-clip-text text-transparent leading-tight">
               Website Giới Thiệu Sản Phẩm STEM
             </h1>
