@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
+import { sendTelegramMessage } from '@/lib/telegram'
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
         userId: session?.userId || null
       }
     })
+
+    await sendTelegramMessage(`🐛 <b>Bug Report</b>\nFrom: ${userContext}\nMessage: ${message}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {

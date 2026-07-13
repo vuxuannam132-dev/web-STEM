@@ -223,7 +223,7 @@ export default function AiChatWidget() {
         onClick={() => { setShowTooltip(false); setIsOpen(!isOpen); }}
         className={`fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 shadow-lg hover:shadow-xl hover:scale-110 ${
           isOpen
-            ? 'bg-white/10 backdrop-blur-xl border border-white/20 rotate-90'
+            ? 'bg-slate-800 border border-slate-700 shadow-xl rotate-90'
             : 'ai-fab-gradient border-2 border-white/30'
         }`}
         aria-label="Mở AI Chatbot"

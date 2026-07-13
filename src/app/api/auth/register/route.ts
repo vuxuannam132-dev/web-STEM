@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/auth'
 import { registerSchema } from '@/lib/validations'
 import { sendMail } from '@/lib/mailer'
+import { sendTelegramMessage } from '@/lib/telegram'
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -55,6 +56,8 @@ export async function POST(request: Request) {
       subject: 'Mã xác nhận đăng ký tài khoản',
       html: `<p>Xin chào ${name},</p><p>Mã xác nhận của bạn là: <strong>${otp}</strong></p><p>Mã này sẽ hết hạn sau 15 phút.</p>`,
     })
+
+    await sendTelegramMessage(`🚨 <b>New Registration</b>\nName: ${name}\nEmail: ${email}`)
 
     return NextResponse.json({ email, requiresVerification: true })
   } catch (error) {

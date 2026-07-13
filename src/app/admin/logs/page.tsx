@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import GlassCard from '@/components/ui/GlassCard'
 import { Activity, User, FileText, Lock, AlertTriangle, Calendar } from 'lucide-react'
+import GlassButton from '@/components/ui/GlassButton'
 import toast from 'react-hot-toast'
 
 export default function ActivityLogsPage() {
@@ -27,12 +28,32 @@ export default function ActivityLogsPage() {
     }
   }
 
+  const handleUnlock = async (userId: string) => {
+    const toastId = toast.loading('Đang mở khóa...')
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, isLocked: false })
+      })
+      if (res.ok) {
+        toast.success('Mở khóa thành công', { id: toastId })
+        fetchLogs()
+      } else {
+        toast.error('Mở khóa thất bại', { id: toastId })
+      }
+    } catch (error) {
+      toast.error('Lỗi khi mở khóa', { id: toastId })
+    }
+  }
+
   const getLogIcon = (type: string) => {
     switch (type) {
       case 'ACCOUNT': return <User className="w-5 h-5 text-blue-500" />
       case 'POST': return <FileText className="w-5 h-5 text-emerald-500" />
       case 'SECURITY': return <Lock className="w-5 h-5 text-orange-500" />
       case 'BUG': return <AlertTriangle className="w-5 h-5 text-red-500" />
+      case 'UNLOCK_REQUEST': return <Lock className="w-5 h-5 text-yellow-500" />
       default: return <Activity className="w-5 h-5 text-slate-500" />
     }
   }
@@ -43,6 +64,7 @@ export default function ActivityLogsPage() {
       case 'POST': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
       case 'SECURITY': return 'bg-orange-100 text-orange-700 border-orange-200'
       case 'BUG': return 'bg-red-100 text-red-700 border-red-200'
+      case 'UNLOCK_REQUEST': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
       default: return 'bg-slate-100 text-slate-700 border-slate-200'
     }
   }
@@ -53,6 +75,7 @@ export default function ActivityLogsPage() {
       case 'POST': return 'Bài đăng'
       case 'SECURITY': return 'Bảo mật'
       case 'BUG': return 'Báo lỗi'
+      case 'UNLOCK_REQUEST': return 'Yêu cầu mở khóa'
       default: return 'Khác'
     }
   }
@@ -94,6 +117,13 @@ export default function ActivityLogsPage() {
                 <p className="text-slate-700 text-sm leading-relaxed">{log.message}</p>
                 {log.userId && (
                   <p className="text-xs text-slate-400 mt-2">ID Người dùng: {log.userId}</p>
+                )}
+                {log.type === 'UNLOCK_REQUEST' && log.userId && (
+                  <div className="mt-3">
+                    <GlassButton size="sm" variant="primary" onClick={() => handleUnlock(log.userId!)}>
+                      Mở khóa ngay
+                    </GlassButton>
+                  </div>
                 )}
               </div>
             </div>

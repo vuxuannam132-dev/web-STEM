@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendTelegramMessage } from '@/lib/telegram'
 
 export async function POST(request: Request) {
   try {
@@ -43,6 +44,8 @@ export async function POST(request: Request) {
         message: `Yêu cầu mở khóa tài khoản. Lý do: ${reason}\nEmail: ${user.email}`
       }
     })
+
+    await sendTelegramMessage(`🔓 <b>Unlock Request</b>\nUser: ${user.name} (${user.email})\nReason: ${reason}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {

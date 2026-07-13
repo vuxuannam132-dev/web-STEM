@@ -7,6 +7,8 @@ export default function SettingsPage() {
   const [ieltsUrl, setIeltsUrl] = useState("https://ielts-web-vip.vercel.app/");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [resetTarget, setResetTarget] = useState('ALL');
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -47,6 +49,28 @@ export default function SettingsPage() {
     await saveSetting("ielts_link_url", ieltsUrl);
     setIsSaving(false);
     alert("Đã lưu đường dẫn thành công!");
+  };
+
+  const handleReset = async () => {
+    if (!confirm('Bạn có chắc chắn muốn xóa dữ liệu này không? Hành động này không thể hoàn tác!')) return;
+    
+    setIsResetting(true);
+    try {
+      const res = await fetch('/api/admin/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: resetTarget })
+      });
+      if (res.ok) {
+        alert('Đã xóa dữ liệu thành công!');
+      } else {
+        alert('Có lỗi xảy ra khi xóa dữ liệu.');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối.');
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   if (isLoading) return <div className="p-8">Đang tải...</div>;
@@ -96,6 +120,33 @@ export default function SettingsPage() {
               {isSaving ? "Đang lưu..." : "Lưu đường dẫn"}
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-8 bg-red-50 p-6 rounded-xl shadow-sm border border-red-100">
+        <h2 className="text-xl font-semibold mb-4 text-red-700">Khu vực nguy hiểm (Danger Zone)</h2>
+        <div className="py-4">
+          <label className="block font-medium text-red-800 mb-2">Dọn dẹp và khôi phục hệ thống</label>
+          <div className="flex gap-4">
+            <select
+              value={resetTarget}
+              onChange={(e) => setResetTarget(e.target.value)}
+              className="flex-1 px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
+            >
+              <option value="ALL">Xóa toàn bộ dữ liệu (Giữ lại Admin)</option>
+              <option value="PRODUCTS">Chỉ xóa Sản phẩm (Bài đăng)</option>
+              <option value="LOGS">Chỉ xóa Nhật ký hệ thống</option>
+              <option value="USERS">Chỉ xóa Người dùng (Giữ lại Admin)</option>
+            </select>
+            <button
+              onClick={handleReset}
+              disabled={isResetting}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors font-medium"
+            >
+              {isResetting ? "Đang xử lý..." : "Thực hiện Xóa"}
+            </button>
+          </div>
+          <p className="text-sm text-red-600 mt-3">Lưu ý: Hành động này sẽ xóa vĩnh viễn dữ liệu khỏi cơ sở dữ liệu và không thể khôi phục.</p>
         </div>
       </div>
     </div>
