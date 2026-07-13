@@ -145,7 +145,11 @@ export async function POST(request: NextRequest) {
         const totalProducts = await prisma.product.count()
         const products = await prisma.product.findMany({ select: { viewCount: true } })
         const totalViews = products.reduce((acc, p) => acc + (p.viewCount || 0), 0)
-        const report = `📈 <b>BÁO CÁO NHANH:</b>\n\n▪️ Lượt xem SP: <b>${totalViews}</b>\n▪️ Sản phẩm: <b>${totalProducts}</b>\n▪️ Người dùng: <b>${totalUsers}</b>`
+        
+        const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { name: true, email: true } })
+        const adminText = admins.map(a => `👑 ${a.name} (${a.email})`).join('\n')
+
+        const report = `📈 <b>BÁO CÁO NHANH:</b>\n\n▪️ Lượt xem SP: <b>${totalViews}</b>\n▪️ Sản phẩm: <b>${totalProducts}</b>\n▪️ Người dùng: <b>${totalUsers}</b>\n\n👥 <b>DANH SÁCH QUẢN TRỊ VIÊN:</b>\n${adminText}`
         await editMessage(chatId, messageId, report, menus.backToMain)
       }
       else if (data === 'menu_ai') {
@@ -239,6 +243,59 @@ export async function POST(request: NextRequest) {
           const logsText = logs.map(l => `[${l.type}] ${l.message}`).join('\n')
           await editMessage(chatId, messageId, `📝 <b>Logs của User</b>\n\n${logsText}`, { inline_keyboard: [[{ text: "🔙 Trở lại User", callback_data: `user_view_${uid}` }]] })
         }
+      }
+      else if (data.startsWith('block_dev_')) {
+        const [_, __, devId, uid] = data.split('_')
+        
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'blocked_devices' } })
+        let blocked = []
+        if (setting) {
+          try { blocked = JSON.parse(setting.value) } catch (e) {}
+        }
+        if (!blocked.includes(devId)) {
+          blocked.push(devId)
+          await prisma.siteSetting.upsert({
+            where: { key: 'blocked_devices' },
+            update: { value: JSON.stringify(blocked) },
+            create: { key: 'blocked_devices', value: JSON.stringify(blocked) }
+          })
+        }
+        
+        if (uid) {
+          await prisma.user.update({ where: { id: uid }, data: { isLocked: true } })
+        }
+
+        await answerCallback(cb.id, 'Đã đưa thiết bị này vào SỔ ĐEN và KHÓA KHẨN CẤP tài khoản!')
+        
+        // Cập nhật tin nhắn gốc để đổi nút
+        const msgText = cb.message.text
+        const newMarkup = {
+          inline_keyboard: [[{ text: "🟢 Bỏ chặn Thiết bị này", callback_data: `unblock_dev_${devId}_${uid}` }]]
+        }
+        await editMessage(chatId, messageId, `✅ <b>ĐÃ CHẶN THIẾT BỊ VÀ KHÓA TÀI KHOẢN ADMIN NÀY!</b>\n\n${msgText}`, newMarkup)
+      }
+      else if (data.startsWith('unblock_dev_')) {
+        const [_, __, devId, uid] = data.split('_')
+        
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'blocked_devices' } })
+        let blocked = []
+        if (setting) {
+          try { blocked = JSON.parse(setting.value) } catch (e) {}
+        }
+        blocked = blocked.filter((id: string) => id !== devId)
+        
+        await prisma.siteSetting.update({
+          where: { key: 'blocked_devices' },
+          data: { value: JSON.stringify(blocked) }
+        })
+
+        await answerCallback(cb.id, 'Đã gỡ chặn thiết bị thành công!')
+        
+        const msgText = cb.message.text
+        const newMarkup = {
+          inline_keyboard: [[{ text: "🛑 Chặn Thiết bị này ngay lập tức", callback_data: `block_dev_${devId}_${uid}` }]]
+        }
+        await editMessage(chatId, messageId, msgText.replace('✅ ĐÃ CHẶN THIẾT BỊ VÀ KHÓA TÀI KHOẢN ADMIN NÀY!\n\n', ''), newMarkup)
       }
     }
 

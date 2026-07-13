@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
+import { prisma } from './prisma'
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret')
 
@@ -36,11 +37,23 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
   }
 }
 
+
 export async function getSession(): Promise<JWTPayload | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('token')?.value
   if (!token) return null
-  return verifyToken(token)
+  
+  const payload = await verifyToken(token)
+  if (!payload) return null
+
+  // Security check: Instant logout if account is locked
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { isLocked: true }
+  })
+  if (!user || user.isLocked) return null
+
+  return payload
 }
 
 export async function setAuthCookie(token: string) {
