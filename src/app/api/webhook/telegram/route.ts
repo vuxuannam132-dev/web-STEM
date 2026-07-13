@@ -50,6 +50,7 @@ const menus = {
   },
   settings: {
     inline_keyboard: [
+      [{ text: "📱 Sổ Đen Thiết Bị", callback_data: "menu_blacklist" }],
       [{ text: "🗑️ Danger Zone (Xóa Dữ Liệu)", callback_data: "menu_danger" }],
       [{ text: "🔙 Quay lại", callback_data: "menu_main" }]
     ]
@@ -244,16 +245,41 @@ export async function POST(request: NextRequest) {
           await editMessage(chatId, messageId, `📝 <b>Logs của User</b>\n\n${logsText}`, { inline_keyboard: [[{ text: "🔙 Trở lại User", callback_data: `user_view_${uid}` }]] })
         }
       }
+      else if (data === 'menu_blacklist') {
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'blocked_devices' } })
+        let blocked = []
+        if (setting) {
+          try { blocked = JSON.parse(setting.value) } catch (e) {}
+        }
+        
+        if (blocked.length === 0) {
+          await editMessage(chatId, messageId, '📱 <b>SỔ ĐEN THIẾT BỊ</b>\n\nHiện không có thiết bị nào bị chặn.', menus.settings)
+        } else {
+          const buttons = blocked.map((b: any) => {
+            const devId = typeof b === 'string' ? b : b.id
+            const name = typeof b === 'string' ? devId : b.name
+            return [{ text: `🟢 Mở chặn: ${name}`, callback_data: `unblock_dev_${devId}_blacklist` }]
+          })
+          buttons.push([{ text: "🔙 Quay lại", callback_data: "menu_settings" }])
+          await editMessage(chatId, messageId, `📱 <b>SỔ ĐEN THIẾT BỊ (${blocked.length})</b>\n\nChọn để mở chặn:`, { inline_keyboard: buttons })
+        }
+      }
       else if (data.startsWith('block_dev_')) {
         const [_, __, devId, uid] = data.split('_')
+        const msgText = cb.message.text || ''
+        const matchName = msgText.match(/Thiết bị: (.+)/)
+        const deviceName = matchName ? matchName[1].trim() : devId
         
         const setting = await prisma.siteSetting.findUnique({ where: { key: 'blocked_devices' } })
         let blocked = []
         if (setting) {
           try { blocked = JSON.parse(setting.value) } catch (e) {}
         }
-        if (!blocked.includes(devId)) {
-          blocked.push(devId)
+        
+        const isBlocked = blocked.some((b: any) => (typeof b === 'string' ? b : b.id) === devId)
+        
+        if (!isBlocked) {
+          blocked.push({ id: devId, name: deviceName, time: new Date().toISOString() })
           await prisma.siteSetting.upsert({
             where: { key: 'blocked_devices' },
             update: { value: JSON.stringify(blocked) },
@@ -275,14 +301,16 @@ export async function POST(request: NextRequest) {
         await editMessage(chatId, messageId, `✅ <b>ĐÃ CHẶN THIẾT BỊ VÀ KHÓA TÀI KHOẢN ADMIN NÀY!</b>\n\n${msgText}`, newMarkup)
       }
       else if (data.startsWith('unblock_dev_')) {
-        const [_, __, devId, uid] = data.split('_')
+        const parts = data.split('_')
+        const devId = parts[2]
+        const uid = parts[3]
         
         const setting = await prisma.siteSetting.findUnique({ where: { key: 'blocked_devices' } })
         let blocked = []
         if (setting) {
           try { blocked = JSON.parse(setting.value) } catch (e) {}
         }
-        blocked = blocked.filter((id: string) => id !== devId)
+        blocked = blocked.filter((b: any) => (typeof b === 'string' ? b : b.id) !== devId)
         
         await prisma.siteSetting.update({
           where: { key: 'blocked_devices' },
@@ -291,11 +319,22 @@ export async function POST(request: NextRequest) {
 
         await answerCallback(cb.id, 'Đã gỡ chặn thiết bị thành công!')
         
-        const msgText = cb.message.text
-        const newMarkup = {
-          inline_keyboard: [[{ text: "🛑 Chặn Thiết bị này ngay lập tức", callback_data: `block_dev_${devId}_${uid}` }]]
+        if (uid === 'blacklist') {
+          // Trở lại menu blacklist
+          const buttons = blocked.map((b: any) => {
+            const bId = typeof b === 'string' ? b : b.id
+            const name = typeof b === 'string' ? bId : b.name
+            return [{ text: `🟢 Mở chặn: ${name}`, callback_data: `unblock_dev_${bId}_blacklist` }]
+          })
+          buttons.push([{ text: "🔙 Quay lại", callback_data: "menu_settings" }])
+          await editMessage(chatId, messageId, `📱 <b>SỔ ĐEN THIẾT BỊ (${blocked.length})</b>\n\nChọn để mở chặn:`, { inline_keyboard: buttons })
+        } else {
+          const msgText = cb.message.text || ''
+          const newMarkup = {
+            inline_keyboard: [[{ text: "🛑 Chặn Thiết bị này ngay lập tức", callback_data: `block_dev_${devId}_${uid}` }]]
+          }
+          await editMessage(chatId, messageId, msgText.replace('✅ ĐÃ CHẶN THIẾT BỊ VÀ KHÓA TÀI KHOẢN ADMIN NÀY!\n\n', ''), newMarkup)
         }
-        await editMessage(chatId, messageId, msgText.replace('✅ ĐÃ CHẶN THIẾT BỊ VÀ KHÓA TÀI KHOẢN ADMIN NÀY!\n\n', ''), newMarkup)
       }
     }
 

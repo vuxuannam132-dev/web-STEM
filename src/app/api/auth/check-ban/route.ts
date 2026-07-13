@@ -12,7 +12,11 @@ export async function GET() {
     let blockedDevices: string[] = []
     if (bannedDevicesSetting && bannedDevicesSetting.value) {
       try {
-        blockedDevices = JSON.parse(bannedDevicesSetting.value)
+        const parsed = JSON.parse(bannedDevicesSetting.value)
+        if (Array.isArray(parsed)) {
+          // Xử lý cả dạng chuỗi (cũ) và dạng object (mới)
+          blockedDevices = parsed.map(item => typeof item === 'string' ? item : item.id)
+        }
       } catch (e) {}
     }
 

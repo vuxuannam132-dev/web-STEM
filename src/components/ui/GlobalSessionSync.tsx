@@ -13,8 +13,27 @@ export default function GlobalSessionSync() {
   const [message, setMessage] = useState<{ type: 'error'|'success', text: string } | null>(null)
 
   useEffect(() => {
-    // Only poll if user is logged in
-    if (!user) return
+    // 1. Device Ban Polling (Chạy cho tất cả mọi người)
+    const checkBan = async () => {
+      // Bỏ qua nếu đã ở trang bị chặn
+      if (window.location.pathname === '/banned') return
+      try {
+        const res = await fetch('/api/auth/check-ban')
+        if (res.ok) {
+          const data = await res.json()
+          const deviceId = document.cookie.split('; ').find(row => row.startsWith('device_id='))?.split('=')[1]
+          if (deviceId && Array.isArray(data.blocked) && data.blocked.includes(deviceId)) {
+            window.location.href = '/banned'
+          }
+        }
+      } catch (e) {}
+    }
+    
+    checkBan()
+    const banInterval = setInterval(checkBan, 10000) // Kiểm tra mỗi 10 giây
+
+    // 2. User Lock Polling (Chỉ chạy khi đã đăng nhập)
+    if (!user) return () => clearInterval(banInterval)
 
     const checkStatus = async () => {
       try {
@@ -23,26 +42,22 @@ export default function GlobalSessionSync() {
           const data = await res.json()
           if (!data.authenticated) return
 
-          if (data.isLocked) {
-            setIsLocked(true)
-          } else {
-            setIsLocked(false)
-          }
+          setIsLocked(!!data.isLocked)
 
-          // Sync role if it changed in DB
           if (user && data.role && data.role !== (user as any).role) {
             await refetch()
           }
         }
-      } catch (e) {
-        // Ignore network errors
-      }
+      } catch (e) {}
     }
 
-    // Check immediately and then every 30 seconds
     checkStatus()
-    const interval = setInterval(checkStatus, 30000)
-    return () => clearInterval(interval)
+    const statusInterval = setInterval(checkStatus, 30000)
+
+    return () => {
+      clearInterval(banInterval)
+      clearInterval(statusInterval)
+    }
   }, [user, refetch])
 
   const handleUnlockRequest = async (e: React.FormEvent) => {
