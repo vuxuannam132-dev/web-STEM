@@ -6,43 +6,149 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8828705964:AAFTVrQrj2skrLCw
 async function reply(chatId: string | number, text: string, replyMarkup?: any) {
   try {
     const body: any = { chat_id: chatId, text, parse_mode: 'HTML' }
-    if (replyMarkup) {
-      body.reply_markup = replyMarkup
-    }
+    if (replyMarkup) body.reply_markup = replyMarkup
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     })
   } catch (e) {
     console.error('Telegram reply error:', e)
   }
 }
 
-const defaultKeyboard = {
-  keyboard: [
-    [{ text: "📊 Báo cáo hệ thống" }, { text: "🤖 Lượt dùng AI" }],
-    [{ text: "👥 Người dùng" }, { text: "📝 Nhật ký Logs" }]
-  ],
-  resize_keyboard: true,
-  is_persistent: true
+async function editMessage(chatId: string | number, messageId: number, text: string, replyMarkup?: any) {
+  try {
+    const body: any = { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' }
+    if (replyMarkup) body.reply_markup = replyMarkup
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    })
+  } catch (e) {
+    console.error('Telegram edit error:', e)
+  }
+}
+
+async function answerCallback(callbackQueryId: string, text?: string) {
+  try {
+    const body: any = { callback_query_id: callbackQueryId }
+    if (text) body.text = text
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    })
+  } catch (e) {
+    console.error('Telegram answerCallback error:', e)
+  }
+}
+
+const menus = {
+  main: {
+    inline_keyboard: [
+      [{ text: "📊 Báo cáo Hệ thống", callback_data: "menu_report" }],
+      [{ text: "👥 Quản lý Người dùng", callback_data: "menu_users" }, { text: "🤖 Lượt dùng AI", callback_data: "menu_ai" }],
+      [{ text: "📝 Xem 5 Logs gần nhất", callback_data: "menu_logs" }],
+      [{ text: "⚙️ Cài đặt (Danger Zone)", callback_data: "menu_settings" }]
+    ]
+  },
+  settings: {
+    inline_keyboard: [
+      [{ text: "🗑️ Danger Zone (Xóa Dữ Liệu)", callback_data: "menu_danger" }],
+      [{ text: "🔙 Quay lại", callback_data: "menu_main" }]
+    ]
+  },
+  danger: {
+    inline_keyboard: [
+      [{ text: "Xóa Sản phẩm", callback_data: "reset_PRODUCTS" }, { text: "Xóa Logs", callback_data: "reset_LOGS" }],
+      [{ text: "Xóa User", callback_data: "reset_USERS" }, { text: "Xóa TẤT CẢ", callback_data: "reset_ALL" }],
+      [{ text: "🔙 Quay lại", callback_data: "menu_settings" }]
+    ]
+  },
+  backToMain: {
+    inline_keyboard: [[{ text: "🔙 Quay lại Menu Chính", callback_data: "menu_main" }]]
+  }
+}
+
+async function getBotConfig() {
+  const settings = await prisma.siteSetting.findMany({
+    where: { key: { in: ['telegram_bot_password', 'telegram_admin_ids'] } }
+  })
+  let password = 'Vunam15022009@dkhbt'
+  let adminIds: string[] = []
+  
+  for (const s of settings) {
+    if (s.key === 'telegram_bot_password') password = s.value
+    if (s.key === 'telegram_admin_ids') {
+      try { 
+        const parsed = JSON.parse(s.value) 
+        if (Array.isArray(parsed)) adminIds = parsed.map(String)
+      } catch (e) {}
+    }
+  }
+  return { password, adminIds }
+}
+
+async function auth(chatId: number, text?: string): Promise<boolean> {
+  const conf = await getBotConfig()
+  const chatStr = String(chatId)
+  
+  if (conf.adminIds.includes(chatStr)) return true
+  
+  if (text === conf.password) {
+    conf.adminIds.push(chatStr)
+    await prisma.siteSetting.upsert({
+      where: { key: 'telegram_admin_ids' },
+      update: { value: JSON.stringify(conf.adminIds) },
+      create: { key: 'telegram_admin_ids', value: JSON.stringify(conf.adminIds) }
+    })
+    await reply(chatId, '✅ <b>Mật khẩu đúng. Đã mở khóa quyền truy cập Bot.</b>\n\nGõ /menu để bắt đầu!', menus.main)
+    return false // Mới xác thực xong, không xử lý tiếp lệnh hiện tại
+  }
+  
+  await reply(chatId, '⛔ <b>Bạn không phải admin và không có quyền sử dụng bot.</b>\n\nVui lòng nhập mật khẩu để truy cập:')
+  return false
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const message = body?.message
 
-    if (message && message.text) {
-      const chatId = message.chat.id
-      const text = message.text.trim()
+    if (body.message && body.message.text) {
+      const chatId = body.message.chat.id
+      const text = body.message.text.trim()
 
-      if (text === '/start' || text === '📊 Báo cáo hệ thống' || text === '/status') {
+      const isAuthed = await auth(chatId, text)
+      if (!isAuthed) return NextResponse.json({ ok: true })
+
+      if (text === '/start' || text === '/menu') {
+        await reply(chatId, '🌟 <b>MENU QUẢN TRỊ VIÊN</b> 🌟\n\nXin chào, Admin! Chọn một chức năng bên dưới:', menus.main)
+      } else {
+        await reply(chatId, 'Lệnh không xác định. Gõ /menu để mở bảng điều khiển.')
+      }
+    } 
+    else if (body.callback_query) {
+      const cb = body.callback_query
+      const chatId = cb.message.chat.id
+      const messageId = cb.message.message_id
+      const data = cb.data
+
+      const isAuthed = await auth(chatId)
+      if (!isAuthed) {
+        await answerCallback(cb.id, '⛔ Không có quyền truy cập!')
+        return NextResponse.json({ ok: true })
+      }
+
+      await answerCallback(cb.id) // acknowledge
+
+      if (data === 'menu_main') {
+        await editMessage(chatId, messageId, '🌟 <b>MENU QUẢN TRỊ VIÊN</b> 🌟\n\nXin chào, Admin! Chọn một chức năng bên dưới:', menus.main)
+      }
+      else if (data === 'menu_report') {
         const totalUsers = await prisma.user.count()
         const totalProducts = await prisma.product.count()
         const products = await prisma.product.findMany({ select: { viewCount: true } })
         const totalViews = products.reduce((acc, p) => acc + (p.viewCount || 0), 0)
-        
+        const report = `📈 <b>BÁO CÁO NHANH:</b>\n\n▪️ Lượt xem SP: <b>${totalViews}</b>\n▪️ Sản phẩm: <b>${totalProducts}</b>\n▪️ Người dùng: <b>${totalUsers}</b>`
+        await editMessage(chatId, messageId, report, menus.backToMain)
+      }
+      else if (data === 'menu_ai') {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const activeAiUsers = await prisma.user.findMany({
@@ -50,69 +156,103 @@ export async function POST(request: NextRequest) {
           select: { aiQueryCount: true }
         })
         const aiQueries = activeAiUsers.reduce((acc, u) => acc + (u.aiQueryCount || 0), 0)
-
-        const report = `🌟 <b>HỆ THỐNG WEB STEM THPT ĐOÀN KẾT</b> 🌟
-<i>Trạng thái: Đang hoạt động ổn định 🟢</i>
-
-📈 <b>BÁO CÁO NHANH:</b>
-▪️ Tổng lượt xem SP: <b>${totalViews}</b> lượt
-▪️ Tổng số Sản phẩm: <b>${totalProducts}</b>
-▪️ Tổng số Người dùng: <b>${totalUsers}</b>
-▪️ Lượt dùng AI hôm nay: <b>${aiQueries}</b> lượt
-
-<i>Chọn các lệnh bên dưới bàn phím để xem chi tiết nhé! 👇</i>`
-
-        await reply(chatId, report, defaultKeyboard)
-        
-      } else if (text === '/users' || text === '👥 Người dùng') {
-        const totalUsers = await prisma.user.count()
-        const guestUsers = await prisma.user.count({ where: { role: 'GUEST' } })
-        const adminUsers = await prisma.user.count({ where: { role: 'ADMIN' } })
-        const normalUsers = totalUsers - guestUsers - adminUsers
-        
-        await reply(chatId, `👥 <b>THỐNG KÊ NGƯỜI DÙNG</b>\n\n👨‍🎓 Thành viên: <b>${normalUsers}</b>\n🕵️ Khách (Guest): <b>${guestUsers}</b>\n👑 Quản trị (Admin): <b>${adminUsers}</b>\n\n📊 Tổng cộng: <b>${totalUsers}</b>`, defaultKeyboard)
-        
-      } else if (text === '/ai' || text === '🤖 Lượt dùng AI') {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        
-        const users = await prisma.user.findMany({
-          where: { lastAiQueryDate: { gte: today } },
-          select: { aiQueryCount: true }
-        })
-        
-        const sum = users.reduce((acc, user) => acc + (user.aiQueryCount || 0), 0)
-        await reply(chatId, `🤖 <b>THỐNG KÊ TRỢ LÝ AI</b>\n\n⚡ Lượt hỏi hôm nay: <b>${sum}</b>\n🧑‍💻 Số người đã dùng: <b>${users.length}</b>`, defaultKeyboard)
-        
-      } else if (text === '/logs' || text === '📝 Nhật ký Logs') {
-        const logs = await prisma.activityLog.findMany({
-          orderBy: { createdAt: 'desc' },
-          take: 5
-        })
-        
+        await editMessage(chatId, messageId, `🤖 <b>THỐNG KÊ AI HÔM NAY</b>\n\n⚡ Lượt hỏi: <b>${aiQueries}</b>\n🧑‍💻 Người dùng AI: <b>${activeAiUsers.length}</b>`, menus.backToMain)
+      }
+      else if (data === 'menu_logs') {
+        const logs = await prisma.activityLog.findMany({ orderBy: { createdAt: 'desc' }, take: 5 })
         if (logs.length === 0) {
-          await reply(chatId, '📭 Không có nhật ký nào.', defaultKeyboard)
+          await editMessage(chatId, messageId, '📭 Không có nhật ký nào.', menus.backToMain)
         } else {
           const logsText = logs.map(l => `[${new Date(l.createdAt).toLocaleTimeString()}] <b>${l.type}</b>\n${l.message}`).join('\n\n')
-          await reply(chatId, `📝 <b>5 HOẠT ĐỘNG GẦN NHẤT</b>\n\n${logsText}`, defaultKeyboard)
+          await editMessage(chatId, messageId, `📝 <b>5 HOẠT ĐỘNG GẦN NHẤT</b>\n\n${logsText}`, menus.backToMain)
+        }
+      }
+      else if (data === 'menu_settings') {
+        await editMessage(chatId, messageId, '⚙️ <b>CÀI ĐẶT HỆ THỐNG</b>\n\nBạn muốn làm gì?', menus.settings)
+      }
+      else if (data === 'menu_danger') {
+        await editMessage(chatId, messageId, '🗑️ <b>DANGER ZONE</b>\n\nCẢNH BÁO: Hành động xóa không thể hoàn tác. Vui lòng chọn mục tiêu:', menus.danger)
+      }
+      else if (data.startsWith('reset_')) {
+        const target = data.replace('reset_', '')
+        const confirmMenu = {
+          inline_keyboard: [
+            [{ text: "✅ CHẮC CHẮN XÓA", callback_data: `do_reset_${target}` }],
+            [{ text: "❌ Hủy", callback_data: "menu_danger" }]
+          ]
+        }
+        await editMessage(chatId, messageId, `⚠️ <b>XÁC NHẬN XÓA: ${target}</b>\nBạn có chắc chắn? Hành động này sẽ xóa dữ liệu vĩnh viễn!`, confirmMenu)
+      }
+      else if (data.startsWith('do_reset_')) {
+        const target = data.replace('do_reset_', '')
+        if (target === 'PRODUCTS' || target === 'ALL') await prisma.product.deleteMany()
+        if (target === 'LOGS' || target === 'ALL') await prisma.activityLog.deleteMany()
+        if (target === 'USERS' || target === 'ALL') await prisma.user.deleteMany({ where: { role: { not: 'ADMIN' } } })
+        await editMessage(chatId, messageId, `✅ <b>Đã xóa thành công: ${target}</b>`, menus.backToMain)
+      }
+      else if (data === 'menu_users') {
+        const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 8 })
+        const buttons = users.map(u => [{ text: `${u.isLocked ? '🔒' : '👤'} ${u.name} (${u.email})`, callback_data: `user_view_${u.id}` }])
+        buttons.push([{ text: "🔙 Quay lại", callback_data: "menu_main" }])
+        await editMessage(chatId, messageId, '👥 <b>DANH SÁCH NGƯỜI DÙNG (8 MỚI NHẤT)</b>\n\nChọn để thao tác:', { inline_keyboard: buttons })
+      }
+      else if (data.startsWith('user_view_')) {
+        const uid = data.replace('user_view_', '')
+        const u = await prisma.user.findUnique({ where: { id: uid } })
+        if (!u) {
+          await editMessage(chatId, messageId, '❌ User không tồn tại.', menus.backToMain)
+        } else {
+          const userMenu = {
+            inline_keyboard: [
+              [{ text: u.isLocked ? "🔓 Mở Khóa" : "🔒 Khóa", callback_data: `user_togglelock_${u.id}` }, { text: "📝 Xem Logs", callback_data: `user_logs_${u.id}` }],
+              [{ text: "🔙 Trở lại Danh sách", callback_data: "menu_users" }]
+            ]
+          }
+          const info = `👤 <b>${u.name}</b>\nEmail: ${u.email}\nQuyền: ${u.role}\nTham gia: ${new Date(u.createdAt).toLocaleDateString()}\nTrạng thái: ${u.isLocked ? 'Đang bị khóa 🔒' : 'Hoạt động 🟢'}\n\nLượt dùng AI: ${u.aiQueryCount}`
+          await editMessage(chatId, messageId, info, userMenu)
+        }
+      }
+      else if (data.startsWith('user_togglelock_')) {
+        const uid = data.replace('user_togglelock_', '')
+        const u = await prisma.user.findUnique({ where: { id: uid } })
+        if (u) {
+          await prisma.user.update({ where: { id: uid }, data: { isLocked: !u.isLocked } })
+          await answerCallback(cb.id, `Đã ${!u.isLocked ? 'KHÓA' : 'MỞ KHÓA'} tài khoản!`)
+          
+          const updatedU = await prisma.user.findUnique({ where: { id: uid } })
+          const userMenu = {
+            inline_keyboard: [
+              [{ text: updatedU?.isLocked ? "🔓 Mở Khóa" : "🔒 Khóa", callback_data: `user_togglelock_${uid}` }, { text: "📝 Xem Logs", callback_data: `user_logs_${uid}` }],
+              [{ text: "🔙 Trở lại Danh sách", callback_data: "menu_users" }]
+            ]
+          }
+          const info = `👤 <b>${updatedU?.name}</b>\nEmail: ${updatedU?.email}\nQuyền: ${updatedU?.role}\nTrạng thái: ${updatedU?.isLocked ? 'Đang bị khóa 🔒' : 'Hoạt động 🟢'}\n\nLượt dùng AI: ${updatedU?.aiQueryCount}`
+          await editMessage(chatId, messageId, info, userMenu)
+        }
+      }
+      else if (data.startsWith('user_logs_')) {
+        const uid = data.replace('user_logs_', '')
+        const logs = await prisma.activityLog.findMany({ where: { userId: uid }, orderBy: { createdAt: 'desc' }, take: 5 })
+        if (logs.length === 0) {
+          await answerCallback(cb.id, 'Chưa có hoạt động nào!')
+        } else {
+          const logsText = logs.map(l => `[${l.type}] ${l.message}`).join('\n')
+          await editMessage(chatId, messageId, `📝 <b>Logs của User</b>\n\n${logsText}`, { inline_keyboard: [[{ text: "🔙 Trở lại User", callback_data: `user_view_${uid}` }]] })
         }
       }
     }
 
-    // Acknowledge Telegram immediately
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('Webhook error:', error)
-    return NextResponse.json({ ok: true }) // Must return 200 to prevent retries
+    return NextResponse.json({ ok: true })
   }
 }
 
 export async function GET(request: NextRequest) {
   const setup = request.nextUrl.searchParams.get('setup')
-
   if (setup === 'true') {
     const webhookUrl = `${request.nextUrl.origin}/api/webhook/telegram`
-    
     try {
       const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${webhookUrl}`)
       const data = await res.json()
@@ -121,6 +261,5 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to set webhook' }, { status: 500 })
     }
   }
-
   return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
 }

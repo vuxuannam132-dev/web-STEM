@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 export default function SettingsPage() {
   const [showIeltsLink, setShowIeltsLink] = useState(false);
   const [ieltsUrl, setIeltsUrl] = useState("https://ielts-web-vip.vercel.app/");
+  const [telegramBotPassword, setTelegramBotPassword] = useState("Vunam15022009@dkhbt");
+  const [telegramAdminIds, setTelegramAdminIds] = useState("[]");
+  const [newAdminId, setNewAdminId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [resetTarget, setResetTarget] = useState('ALL');
@@ -16,6 +19,8 @@ export default function SettingsPage() {
       .then((data) => {
         if (data.show_ielts_link === "true") setShowIeltsLink(true);
         if (data.ielts_link_url) setIeltsUrl(data.ielts_link_url);
+        if (data.telegram_bot_password) setTelegramBotPassword(data.telegram_bot_password);
+        if (data.telegram_admin_ids) setTelegramAdminIds(data.telegram_admin_ids);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -49,6 +54,41 @@ export default function SettingsPage() {
     await saveSetting("ielts_link_url", ieltsUrl);
     setIsSaving(false);
     alert("Đã lưu đường dẫn thành công!");
+  };
+
+  const handleSaveTelegramPassword = async () => {
+    setIsSaving(true);
+    await saveSetting("telegram_bot_password", telegramBotPassword);
+    setIsSaving(false);
+    alert("Đã lưu mật khẩu Bot Telegram!");
+  };
+
+  const handleAddTelegramAdminId = async () => {
+    if (!newAdminId) return;
+    setIsSaving(true);
+    try {
+      let currentIds = [];
+      try {
+        currentIds = JSON.parse(telegramAdminIds);
+        if (!Array.isArray(currentIds)) currentIds = [];
+      } catch (e) {
+        currentIds = [];
+      }
+      
+      if (!currentIds.includes(newAdminId)) {
+        currentIds.push(newAdminId);
+        const newIdsStr = JSON.stringify(currentIds);
+        setTelegramAdminIds(newIdsStr);
+        await saveSetting("telegram_admin_ids", newIdsStr);
+        alert("Đã thêm Telegram Chat ID thành công!");
+      } else {
+        alert("Chat ID này đã tồn tại!");
+      }
+      setNewAdminId("");
+    } catch (err) {
+      console.error(err);
+    }
+    setIsSaving(false);
   };
 
   const handleReset = async () => {
@@ -118,6 +158,51 @@ export default function SettingsPage() {
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
             >
               {isSaving ? "Đang lưu..." : "Lưu đường dẫn"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-semibold mb-4 text-gray-700">Quản lý Quyền Telegram Bot</h2>
+        
+        <div className="py-4 border-b border-gray-100">
+          <label className="block font-medium text-gray-800 mb-2">Mật khẩu Bot Telegram</label>
+          <div className="flex gap-4">
+            <input
+              type="text"
+              value={telegramBotPassword}
+              onChange={(e) => setTelegramBotPassword(e.target.value)}
+              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nhập mật khẩu..."
+            />
+            <button
+              onClick={handleSaveTelegramPassword}
+              disabled={isSaving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+            >
+              Lưu
+            </button>
+          </div>
+        </div>
+
+        <div className="py-4">
+          <label className="block font-medium text-gray-800 mb-2">Thêm Telegram Chat ID (Admin)</label>
+          <p className="text-sm text-gray-500 mb-2">Danh sách hiện tại: {telegramAdminIds}</p>
+          <div className="flex gap-4">
+            <input
+              type="number"
+              value={newAdminId}
+              onChange={(e) => setNewAdminId(e.target.value)}
+              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nhập Chat ID (ví dụ: 123456789)"
+            />
+            <button
+              onClick={handleAddTelegramAdminId}
+              disabled={isSaving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+            >
+              Thêm ID
             </button>
           </div>
         </div>

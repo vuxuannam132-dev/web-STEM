@@ -6,9 +6,17 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const session = await getSession();
+    const isAdmin = session?.role === "ADMIN";
+
     const settings = await prisma.siteSetting.findMany();
+    
+    const publicKeys = ['show_ielts_link', 'ielts_link_url'];
+    
     const settingsMap = settings.reduce((acc: Record<string, string>, setting: any) => {
-      acc[setting.key] = setting.value;
+      if (isAdmin || publicKeys.includes(setting.key)) {
+        acc[setting.key] = setting.value;
+      }
       return acc;
     }, {});
 
