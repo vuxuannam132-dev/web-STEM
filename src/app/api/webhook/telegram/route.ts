@@ -102,7 +102,25 @@ async function auth(chatId: number, text?: string): Promise<boolean> {
       update: { value: JSON.stringify(conf.adminIds) },
       create: { key: 'telegram_admin_ids', value: JSON.stringify(conf.adminIds) }
     })
-    await reply(chatId, '✅ <b>Mật khẩu đúng. Đã mở khóa quyền truy cập Bot.</b>\n\nGõ /menu để bắt đầu!', menus.main)
+    
+    const persistentKeyboard = {
+      keyboard: [
+        [{ text: "🚀 Bắt đầu" }],
+        [{ text: "📊 Báo cáo Hệ thống" }, { text: "🤖 Lượt dùng AI" }],
+        [{ text: "👥 Quản lý Người dùng" }, { text: "📝 Nhật ký Logs" }],
+        [{ text: "🛡️ Quản lý Sổ Trắng" }, { text: "📱 Quản lý Sổ Đen" }],
+        [{ text: "⚙️ Cài đặt Web" }]
+      ],
+      resize_keyboard: true,
+      is_persistent: true
+    };
+    
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: '✅ <b>Mật khẩu đúng. Đã mở khóa quyền truy cập Bot.</b>', parse_mode: 'HTML', reply_markup: persistentKeyboard })
+    })
+    
+    await reply(chatId, 'Gõ /menu hoặc ấn "🚀 Bắt đầu" để mở bảng điều khiển!', menus.main)
     return false // Mới xác thực xong, không xử lý tiếp lệnh hiện tại
   }
   
@@ -136,6 +154,26 @@ export async function POST(request: NextRequest) {
       }
 
       if (text === '/start' || text === '/menu' || text === '🚀 Bắt đầu') {
+        const persistentKeyboard = {
+          keyboard: [
+            [{ text: "🚀 Bắt đầu" }],
+            [{ text: "📊 Báo cáo Hệ thống" }, { text: "🤖 Lượt dùng AI" }],
+            [{ text: "👥 Quản lý Người dùng" }, { text: "📝 Nhật ký Logs" }],
+            [{ text: "🛡️ Quản lý Sổ Trắng" }, { text: "📱 Quản lý Sổ Đen" }],
+            [{ text: "⚙️ Cài đặt Web" }]
+          ],
+          resize_keyboard: true,
+          is_persistent: true
+        };
+        
+        // Cập nhật bàn phím cứng
+        if (text === '/start') {
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: '🔄 Đã cập nhật bàn phím nhanh!', reply_markup: persistentKeyboard })
+          })
+        }
+        
         await reply(chatId, '🌟 <b>MENU QUẢN TRỊ VIÊN</b> 🌟\n\nXin chào, Admin! Chọn một chức năng bên dưới:', menus.main)
       } else if (text.startsWith('/setemail ')) {
         const newEmail = text.replace('/setemail ', '').trim()
