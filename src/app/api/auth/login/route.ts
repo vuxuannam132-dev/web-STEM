@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyPassword, signToken, setAuthCookie } from '@/lib/auth'
 import { loginSchema } from '@/lib/validations'
 import { cookies } from 'next/headers'
+import UAParser from 'ua-parser-js'
 import { sendTelegramMessage } from '@/lib/telegram'
 
 export async function POST(request: Request) {
@@ -65,10 +66,21 @@ export async function POST(request: Request) {
     if (user.role === 'ADMIN') {
       const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                  request.headers.get('x-real-ip') || 'Unknown IP'
-      const ua = request.headers.get('user-agent') || 'Unknown Device'
+      const ua = request.headers.get('user-agent') || ''
+      const parser = new UAParser(ua)
+      const browser = parser.getBrowser()
+      const os = parser.getOS()
+      const device = parser.getDevice()
+      
+      const deviceName = [device.vendor, device.model].filter(Boolean).join(' ') || 'Máy tính/Thiết bị lạ'
+      const browserInfo = `${browser.name || 'Trình duyệt lạ'} ${browser.version || ''}`.trim()
+      const osInfo = `${os.name || 'Hệ điều hành lạ'} ${os.version || ''}`.trim()
+      
+      const readableDevice = `${browserInfo} trên ${osInfo} (${deviceName})`
+      
       const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 
-      const alertMsg = `🚨 <b>CẢNH BÁO ĐĂNG NHẬP ADMIN</b> 🚨\n\nTài khoản: <b>${user.email}</b>\nIP: <code>${ip}</code>\nThiết bị: <i>${ua}</i>\nThời gian: ${timeStr}\nMã TB: <code>${deviceId}</code>`
+      const alertMsg = `🚨 <b>CẢNH BÁO ĐĂNG NHẬP ADMIN</b> 🚨\n\nTài khoản: <b>${user.email}</b>\nIP: <code>${ip}</code>\nThiết bị: <i>${readableDevice}</i>\nThời gian: ${timeStr}\nMã TB: <code>${deviceId}</code>`
       
       const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8828705964:AAFTVrQrj2skrLCwVjnCiZax0Nex67wsq84'
       const CHAT_ID = process.env.TELEGRAM_CHAT_ID || '8846573144'
