@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyPassword, signToken, setAuthCookie } from '@/lib/auth'
 import { loginSchema } from '@/lib/validations'
 import { cookies } from 'next/headers'
-import UAParser from 'ua-parser-js'
+import { UAParser } from 'ua-parser-js'
 import { sendTelegramMessage } from '@/lib/telegram'
 
 export async function POST(request: Request) {
