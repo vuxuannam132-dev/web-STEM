@@ -184,13 +184,13 @@ export default function LoginPage() {
               Vì bạn đang đăng nhập từ thiết bị lạ, một mã OTP đã được gửi đến Telegram (và Email). Hãy nhập mã để tiếp tục.
             </div>
             <GlassInput
-              label="Mã OTP (6 số)"
+              label="Mã OTP (10 số)"
               type="text"
-              placeholder="123456"
+              placeholder="1234567890"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               required
-              maxLength={6}
+              maxLength={10}
             />
             
             {error && (

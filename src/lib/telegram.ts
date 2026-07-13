@@ -3,8 +3,11 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID || '8846573144'
 
 const defaultKeyboard = {
   keyboard: [
-    [{ text: "📊 Báo cáo hệ thống" }, { text: "🤖 Lượt dùng AI" }],
-    [{ text: "👥 Người dùng" }, { text: "📝 Nhật ký Logs" }]
+    [{ text: "🚀 Bắt đầu" }],
+    [{ text: "📊 Báo cáo Hệ thống" }, { text: "🤖 Lượt dùng AI" }],
+    [{ text: "👥 Quản lý Người dùng" }, { text: "📝 Nhật ký Logs" }],
+    [{ text: "🛡️ Quản lý Sổ Trắng" }, { text: "📱 Quản lý Sổ Đen" }],
+    [{ text: "⚙️ Cài đặt Web" }]
   ],
   resize_keyboard: true,
   is_persistent: true

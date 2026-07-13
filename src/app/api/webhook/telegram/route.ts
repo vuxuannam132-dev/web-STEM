@@ -45,17 +45,17 @@ async function answerCallback(callbackQueryId: string, text?: string) {
 const menus = {
   main: {
     inline_keyboard: [
-      [{ text: "📊 Báo cáo Hệ thống", callback_data: "menu_report" }],
-      [{ text: "👥 Quản lý Người dùng", callback_data: "menu_users" }, { text: "🤖 Lượt dùng AI", callback_data: "menu_ai" }],
-      [{ text: "📝 Xem 5 Logs gần nhất", callback_data: "menu_logs" }],
-      [{ text: "⚙️ Cài đặt (Danger Zone)", callback_data: "menu_settings" }]
+      [{ text: "📊 Báo cáo Hệ thống", callback_data: "menu_report" }, { text: "🤖 Lượt dùng AI", callback_data: "menu_ai" }],
+      [{ text: "👥 Quản lý Người dùng", callback_data: "menu_users" }, { text: "📝 Nhật ký Logs", callback_data: "menu_logs" }],
+      [{ text: "🛡️ Quản lý Sổ Trắng", callback_data: "menu_whitelist" }, { text: "📱 Quản lý Sổ Đen", callback_data: "menu_blacklist" }],
+      [{ text: "⚙️ Cài đặt Web", callback_data: "menu_settings" }]
     ]
   },
   settings: {
     inline_keyboard: [
-      [{ text: "📱 Sổ Đen Thiết Bị", callback_data: "menu_blacklist" }],
+      [{ text: "📧 Đổi Email Nhận OTP", callback_data: "menu_email" }],
       [{ text: "🗑️ Danger Zone (Xóa Dữ Liệu)", callback_data: "menu_danger" }],
-      [{ text: "🔙 Quay lại", callback_data: "menu_main" }]
+      [{ text: "🔙 Quay lại Menu Chính", callback_data: "menu_main" }]
     ]
   },
   danger: {
@@ -129,11 +129,22 @@ export async function POST(request: NextRequest) {
         '👥 Người dùng': 'menu_users',
         '📝 Xem 5 Logs gần nhất': 'menu_logs',
         '📝 Nhật ký Logs': 'menu_logs',
+        '🛡️ Quản lý Sổ Trắng': 'menu_whitelist',
+        '📱 Quản lý Sổ Đen': 'menu_blacklist',
+        '⚙️ Cài đặt Web': 'menu_settings',
         '⚙️ Cài đặt (Danger Zone)': 'menu_settings'
       }
 
-      if (text === '/start' || text === '/menu') {
+      if (text === '/start' || text === '/menu' || text === '🚀 Bắt đầu') {
         await reply(chatId, '🌟 <b>MENU QUẢN TRỊ VIÊN</b> 🌟\n\nXin chào, Admin! Chọn một chức năng bên dưới:', menus.main)
+      } else if (text.startsWith('/setemail ')) {
+        const newEmail = text.replace('/setemail ', '').trim()
+        await prisma.siteSetting.upsert({
+          where: { key: 'admin_otp_email' },
+          update: { value: newEmail },
+          create: { key: 'admin_otp_email', value: newEmail }
+        })
+        await reply(chatId, `✅ <b>Cập nhật thành công!</b>\n\nEmail nhận OTP Admin đã được đổi thành: <code>${newEmail}</code>`)
       } else if (menuMap[text]) {
         // Chuyển hướng xử lý sang callback_query
         body.callback_query = {
@@ -268,6 +279,47 @@ export async function POST(request: NextRequest) {
           const logsText = logs.map(l => `[${l.type}] ${l.message}`).join('\n')
           await editMessage(chatId, messageId, `📝 <b>Logs của User</b>\n\n${logsText}`, { inline_keyboard: [[{ text: "🔙 Trở lại User", callback_data: `user_view_${uid}` }]] })
         }
+      }
+      else if (data === 'menu_email') {
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'admin_otp_email' } })
+        const currentEmail = setting?.value || 'Chưa cài đặt (Dùng email gốc của tài khoản)'
+        await editMessage(chatId, messageId, `📧 <b>CẤU HÌNH EMAIL NHẬN OTP</b>\n\nHiện tại: <code>${currentEmail}</code>\n\nĐể thay đổi Email, vui lòng gõ lệnh theo cú pháp sau gửi cho Bot:\n\n<code>/setemail abc@gmail.com</code>`, menus.settings)
+      }
+      else if (data === 'menu_whitelist') {
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'trusted_devices' } })
+        let trusted = []
+        if (setting) {
+          try { trusted = JSON.parse(setting.value) } catch (e) {}
+        }
+        
+        if (trusted.length === 0) {
+          await editMessage(chatId, messageId, '🛡️ <b>SỔ TRẮNG THIẾT BỊ</b>\n\nHiện không có thiết bị nào được tin cậy.', menus.main)
+        } else {
+          const buttons = trusted.map((devId: string) => {
+            return [{ text: `🗑️ Xóa tin cậy: ${devId.substring(0,8)}...`, callback_data: `untrust_dev_${devId}` }]
+          })
+          buttons.push([{ text: "🔙 Quay lại", callback_data: "menu_main" }])
+          await editMessage(chatId, messageId, `🛡️ <b>SỔ TRẮNG THIẾT BỊ (${trusted.length})</b>\n\nThiết bị tin cậy sẽ không bị hỏi mã OTP khi đăng nhập.`, { inline_keyboard: buttons })
+        }
+      }
+      else if (data.startsWith('untrust_dev_')) {
+        const devId = data.replace('untrust_dev_', '')
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'trusted_devices' } })
+        let trusted = []
+        if (setting) {
+          try { trusted = JSON.parse(setting.value) } catch (e) {}
+        }
+        trusted = trusted.filter((id: string) => id !== devId)
+        await prisma.siteSetting.update({
+          where: { key: 'trusted_devices' },
+          data: { value: JSON.stringify(trusted) }
+        })
+        
+        await answerCallback(cb.id, 'Đã xóa thiết bị khỏi sổ trắng!')
+        
+        const buttons = trusted.map((tid: string) => [{ text: `🗑️ Xóa tin cậy: ${tid.substring(0,8)}...`, callback_data: `untrust_dev_${tid}` }])
+        buttons.push([{ text: "🔙 Quay lại", callback_data: "menu_main" }])
+        await editMessage(chatId, messageId, `🛡️ <b>SỔ TRẮNG THIẾT BỊ (${trusted.length})</b>\n\nĐã cập nhật danh sách.`, { inline_keyboard: buttons })
       }
       else if (data === 'menu_blacklist') {
         const setting = await prisma.siteSetting.findUnique({ where: { key: 'blocked_devices' } })

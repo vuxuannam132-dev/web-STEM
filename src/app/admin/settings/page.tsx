@@ -8,6 +8,9 @@ export default function SettingsPage() {
   const [telegramBotPassword, setTelegramBotPassword] = useState("Vunam15022009@dkhbt");
   const [telegramAdminIds, setTelegramAdminIds] = useState("[]");
   const [newAdminId, setNewAdminId] = useState("");
+  const [adminOtpEmail, setAdminOtpEmail] = useState("");
+  const [trustedDevices, setTrustedDevices] = useState<string[]>([]);
+  const [blockedDevices, setBlockedDevices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [resetTarget, setResetTarget] = useState('ALL');
@@ -21,6 +24,13 @@ export default function SettingsPage() {
         if (data.ielts_link_url) setIeltsUrl(data.ielts_link_url);
         if (data.telegram_bot_password) setTelegramBotPassword(data.telegram_bot_password);
         if (data.telegram_admin_ids) setTelegramAdminIds(data.telegram_admin_ids);
+        if (data.admin_otp_email) setAdminOtpEmail(data.admin_otp_email);
+        if (data.trusted_devices) {
+          try { setTrustedDevices(JSON.parse(data.trusted_devices)); } catch (e) {}
+        }
+        if (data.blocked_devices) {
+          try { setBlockedDevices(JSON.parse(data.blocked_devices)); } catch (e) {}
+        }
         setIsLoading(false);
       })
       .catch((err) => {
@@ -111,6 +121,38 @@ export default function SettingsPage() {
     } finally {
       setIsResetting(false);
     }
+  };
+
+  const handleSaveAdminEmail = async () => {
+    setIsSaving(true);
+    await saveSetting("admin_otp_email", adminOtpEmail);
+    setIsSaving(false);
+    alert("Đã lưu Email nhận OTP Admin!");
+  };
+
+  const handleRemoveTrusted = async (deviceId: string) => {
+    if (!confirm('Bạn có chắc muốn xóa thiết bị này khỏi Sổ trắng?')) return;
+    const newList = trustedDevices.filter(id => id !== deviceId);
+    setTrustedDevices(newList);
+    await saveSetting("trusted_devices", JSON.stringify(newList));
+  };
+
+  const handleRemoveBlocked = async (deviceId: string) => {
+    if (!confirm('Bạn có chắc muốn mở khóa thiết bị này?')) return;
+    const newList = blockedDevices.filter(b => (typeof b === 'string' ? b : b.id) !== deviceId);
+    setBlockedDevices(newList);
+    await saveSetting("blocked_devices", JSON.stringify(newList));
+  };
+
+  const handleBlockTrusted = async (deviceId: string) => {
+    if (!confirm('Đưa thiết bị này vào Sổ đen ngay lập tức?')) return;
+    const newTrusted = trustedDevices.filter(id => id !== deviceId);
+    setTrustedDevices(newTrusted);
+    await saveSetting("trusted_devices", JSON.stringify(newTrusted));
+    
+    const newBlocked = [...blockedDevices, { id: deviceId, name: deviceId, time: new Date().toISOString() }];
+    setBlockedDevices(newBlocked);
+    await saveSetting("blocked_devices", JSON.stringify(newBlocked));
   };
 
   if (isLoading) return <div className="p-8">Đang tải...</div>;
@@ -205,6 +247,75 @@ export default function SettingsPage() {
               Thêm ID
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-semibold mb-4 text-gray-700">Bảo mật Đăng nhập (Admin 2FA)</h2>
+        
+        <div className="py-4 border-b border-gray-100">
+          <label className="block font-medium text-gray-800 mb-2">Email chuyên nhận mã OTP Admin (10 số)</label>
+          <p className="text-sm text-gray-500 mb-2">Nếu để trống, mã sẽ được gửi vào email của tài khoản đang đăng nhập.</p>
+          <div className="flex gap-4">
+            <input
+              type="email"
+              value={adminOtpEmail}
+              onChange={(e) => setAdminOtpEmail(e.target.value)}
+              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="admin@example.com"
+            />
+            <button
+              onClick={handleSaveAdminEmail}
+              disabled={isSaving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+            >
+              Lưu Email
+            </button>
+          </div>
+        </div>
+
+        <div className="py-4 border-b border-gray-100">
+          <label className="block font-medium text-gray-800 mb-2">🛡️ Sổ Trắng (Thiết bị Tin cậy)</label>
+          <p className="text-sm text-gray-500 mb-4">Các thiết bị này khi đăng nhập Admin sẽ không bị hỏi mã OTP.</p>
+          {trustedDevices.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Chưa có thiết bị tin cậy nào.</p>
+          ) : (
+            <ul className="space-y-2">
+              {trustedDevices.map((devId, idx) => (
+                <li key={idx} className="flex items-center justify-between bg-green-50 px-4 py-2 rounded border border-green-100">
+                  <span className="font-mono text-sm text-green-800">{devId}</span>
+                  <div className="space-x-2">
+                    <button onClick={() => handleRemoveTrusted(devId)} className="text-xs bg-white text-gray-600 px-2 py-1 rounded border hover:bg-gray-100">Xóa tin cậy</button>
+                    <button onClick={() => handleBlockTrusted(devId)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded border border-red-200 hover:bg-red-200">Chặn ngay</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="py-4">
+          <label className="block font-medium text-gray-800 mb-2">📱 Sổ Đen (Thiết bị bị Chặn)</label>
+          <p className="text-sm text-gray-500 mb-4">Các thiết bị này sẽ không thể truy cập bất cứ tính năng nào của hệ thống.</p>
+          {blockedDevices.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Sổ đen đang trống.</p>
+          ) : (
+            <ul className="space-y-2">
+              {blockedDevices.map((b, idx) => {
+                const devId = typeof b === 'string' ? b : b.id;
+                const name = typeof b === 'string' ? devId : b.name;
+                return (
+                  <li key={idx} className="flex items-center justify-between bg-gray-50 px-4 py-2 rounded border border-gray-200">
+                    <div>
+                      <span className="font-medium text-sm text-gray-800 block">{name}</span>
+                      <span className="font-mono text-xs text-gray-500">{devId}</span>
+                    </div>
+                    <button onClick={() => handleRemoveBlocked(devId)} className="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-200">Bỏ chặn</button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </div>
 

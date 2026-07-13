@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
       if (!trustedList.includes(deviceId)) {
         // Device NOT trusted -> Require 2FA
-        const otp = Math.floor(100000 + Math.random() * 900000).toString()
+        const otp = Math.floor(1000000000 + Math.random() * 9000000000).toString()
         const expires = Date.now() + 20 * 60 * 1000
         
         await prisma.siteSetting.upsert({
@@ -90,6 +90,10 @@ export async function POST(request: Request) {
           update: { value: JSON.stringify({ otp, expires }) },
           create: { key: `otp_${user.id}`, value: JSON.stringify({ otp, expires }) }
         })
+
+        // Fetch configured admin email if any
+        const adminEmailSetting = await prisma.siteSetting.findUnique({ where: { key: 'admin_otp_email' } })
+        const targetEmail = adminEmailSetting?.value || user.email
 
         // Send OTP via Telegram
         const otpMsg = `🔐 <b>YÊU CẦU ĐĂNG NHẬP ADMIN (THIẾT BỊ LẠ)</b> 🔐\n\nTài khoản: <b>${user.email}</b>\nIP: <code>${ip}</code>\nThiết bị: <i>${readableDevice}</i>\nThời gian: ${timeStr}\n\n👉 MÃ OTP CỦA BẠN LÀ: <code>${otp}</code>\n<i>(Mã có hiệu lực 20 phút)</i>`
@@ -100,12 +104,12 @@ export async function POST(request: Request) {
           })
         } catch (e) {}
 
-        // Optionally Send OTP via Email (if configured)
+        // Send OTP via Email (to configured admin email or fallback to user email)
         try {
           const { sendMail } = await import('@/lib/mailer')
           const { generateAdmin2FAEmail } = await import('@/lib/email-templates')
           await sendMail({
-            to: user.email,
+            to: targetEmail,
             subject: '🚨 [BẢO MẬT] Mã Xác Minh Đăng Nhập Quản Trị Viên',
             html: generateAdmin2FAEmail(user.name, otp, ip, readableDevice, timeStr)
           })
