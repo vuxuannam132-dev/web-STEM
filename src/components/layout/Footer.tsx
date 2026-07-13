@@ -15,18 +15,18 @@ export default function Footer() {
               className="rounded-full"
             />
             <div>
-              <h3 className="text-white font-bold text-lg">THPT Đoàn Kết-Hai Bà Trưng</h3>
-              <p className="text-white/60 text-sm">Website giới thiệu sản phẩm STEM của học sinh</p>
+              <h3 className="text-slate-900 font-bold text-lg">THPT Đoàn Kết-Hai Bà Trưng</h3>
+              <p className="text-slate-600 text-sm">Website giới thiệu sản phẩm STEM của học sinh</p>
             </div>
           </div>
           <div className="text-center md:text-right">
-            <p className="text-white/80 text-sm font-medium">
+            <p className="text-slate-800 text-sm font-medium">
               Trường THPT Đoàn Kết - Hai Bà Trưng (Hà Nội)
             </p>
-            <p className="text-white/60 text-sm mt-1">
+            <p className="text-slate-600 text-sm mt-1">
               Địa chỉ: Số 174 Hồng Mai, phường Quỳnh Lôi, quận Hai Bà Trưng, thành phố Hà Nội.
             </p>
-            <p className="text-white/50 text-xs mt-2">
+            <p className="text-slate-500 text-xs mt-2">
               © 2026 Dev by Vũ Xuân Nam D2K64 trường THPT Đoàn Kết-Hai Bà Trưng kính tặng.
             </p>
           </div>
