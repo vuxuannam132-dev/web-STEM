@@ -15,7 +15,10 @@ async function reply(chatId: string | number, text: string, replyMarkup?: any) {
   }
 }
 
-async function editMessage(chatId: string | number, messageId: number, text: string, replyMarkup?: any) {
+async function editMessage(chatId: string | number, messageId: number | null | undefined, text: string, replyMarkup?: any) {
+  if (!messageId) {
+    return reply(chatId, text, replyMarkup)
+  }
   try {
     const body: any = { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' }
     if (replyMarkup) body.reply_markup = replyMarkup
@@ -118,13 +121,34 @@ export async function POST(request: NextRequest) {
       const isAuthed = await auth(chatId, text)
       if (!isAuthed) return NextResponse.json({ ok: true })
 
+      const menuMap: Record<string, string> = {
+        '📊 Báo cáo hệ thống': 'menu_report',
+        '📊 Báo cáo Hệ thống': 'menu_report',
+        '🤖 Lượt dùng AI': 'menu_ai',
+        '👥 Quản lý Người dùng': 'menu_users',
+        '👥 Người dùng': 'menu_users',
+        '📝 Xem 5 Logs gần nhất': 'menu_logs',
+        '📝 Nhật ký Logs': 'menu_logs',
+        '⚙️ Cài đặt (Danger Zone)': 'menu_settings'
+      }
+
       if (text === '/start' || text === '/menu') {
         await reply(chatId, '🌟 <b>MENU QUẢN TRỊ VIÊN</b> 🌟\n\nXin chào, Admin! Chọn một chức năng bên dưới:', menus.main)
+      } else if (menuMap[text]) {
+        // Chuyển hướng xử lý sang callback_query
+        body.callback_query = {
+          id: Date.now().toString(),
+          data: menuMap[text],
+          message: { chat: { id: chatId }, message_id: null, text: '' }
+        }
+        delete body.message
+        // Xử lý tiếp ở logic callback_query phía dưới
       } else {
         await reply(chatId, 'Lệnh không xác định. Gõ /menu để mở bảng điều khiển.')
       }
     } 
-    else if (body.callback_query) {
+    
+    if (body.callback_query) {
       const cb = body.callback_query
       const chatId = cb.message.chat.id
       const messageId = cb.message.message_id
@@ -287,18 +311,14 @@ export async function POST(request: NextRequest) {
           })
         }
         
-        if (uid) {
-          await prisma.user.update({ where: { id: uid }, data: { isLocked: true } })
-        }
-
-        await answerCallback(cb.id, 'Đã đưa thiết bị này vào SỔ ĐEN và KHÓA KHẨN CẤP tài khoản!')
+        await answerCallback(cb.id, 'Đã đưa thiết bị này vào SỔ ĐEN!')
         
         // Cập nhật tin nhắn gốc để đổi nút
-        const msgText = cb.message.text
+        const oldMsgText = cb.message?.text || ''
         const newMarkup = {
           inline_keyboard: [[{ text: "🟢 Bỏ chặn Thiết bị này", callback_data: `unblock_dev_${devId}_${uid}` }]]
         }
-        await editMessage(chatId, messageId, `✅ <b>ĐÃ CHẶN THIẾT BỊ VÀ KHÓA TÀI KHOẢN ADMIN NÀY!</b>\n\n${msgText}`, newMarkup)
+        await editMessage(chatId, messageId, `✅ <b>ĐÃ CHẶN THIẾT BỊ NÀY!</b>\n\n${oldMsgText}`, newMarkup)
       }
       else if (data.startsWith('unblock_dev_')) {
         const parts = data.split('_')
@@ -329,12 +349,42 @@ export async function POST(request: NextRequest) {
           buttons.push([{ text: "🔙 Quay lại", callback_data: "menu_settings" }])
           await editMessage(chatId, messageId, `📱 <b>SỔ ĐEN THIẾT BỊ (${blocked.length})</b>\n\nChọn để mở chặn:`, { inline_keyboard: buttons })
         } else {
-          const msgText = cb.message.text || ''
+          const oldMsgText = cb.message?.text || ''
           const newMarkup = {
-            inline_keyboard: [[{ text: "🛑 Chặn Thiết bị này ngay lập tức", callback_data: `block_dev_${devId}_${uid}` }]]
+            inline_keyboard: [[
+              { text: "✅ Tin cậy", callback_data: `trust_dev_${devId}_${uid}` },
+              { text: "🛑 Chặn Thiết bị", callback_data: `block_dev_${devId}_${uid}` }
+            ]]
           }
-          await editMessage(chatId, messageId, msgText.replace('✅ ĐÃ CHẶN THIẾT BỊ VÀ KHÓA TÀI KHOẢN ADMIN NÀY!\n\n', ''), newMarkup)
+          await editMessage(chatId, messageId, oldMsgText.replace('✅ ĐÃ CHẶN THIẾT BỊ NÀY!\n\n', ''), newMarkup)
         }
+      }
+      else if (data.startsWith('trust_dev_')) {
+        const parts = data.split('_')
+        const devId = parts[2]
+        const uid = parts[3]
+        
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'trusted_devices' } })
+        let trusted = []
+        if (setting) {
+          try { trusted = JSON.parse(setting.value) } catch (e) {}
+        }
+        if (!trusted.includes(devId)) {
+          trusted.push(devId)
+          await prisma.siteSetting.upsert({
+            where: { key: 'trusted_devices' },
+            update: { value: JSON.stringify(trusted) },
+            create: { key: 'trusted_devices', value: JSON.stringify(trusted) }
+          })
+        }
+        
+        await answerCallback(cb.id, 'Đã đưa thiết bị vào Sổ Trắng (Tin cậy)!')
+        
+        const oldMsgText = cb.message?.text || ''
+        const newMarkup = {
+          inline_keyboard: [[{ text: "🛑 Bỏ Tin cậy & Chặn", callback_data: `block_dev_${devId}_${uid}` }]]
+        }
+        await editMessage(chatId, messageId, `🛡️ <b>THIẾT BỊ ĐÃ ĐƯỢC TIN CẬY</b>\n\n${oldMsgText}`, newMarkup)
       }
     }
 

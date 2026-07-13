@@ -54,15 +54,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'not_verified', email: user.email }, { status: 403 })
     }
 
-    const token = await signToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    })
-    await setAuthCookie(token)
-
-    // 3. Admin Login Alert
+    // 3. Admin Login Alert & 2FA Check
     if (user.role === 'ADMIN') {
       const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                  request.headers.get('x-real-ip') || 'Unknown IP'
@@ -77,26 +69,71 @@ export async function POST(request: Request) {
       const osInfo = `${os.name || 'Hệ điều hành lạ'} ${os.version || ''}`.trim()
       
       const readableDevice = `${browserInfo} trên ${osInfo} (${deviceName})`
-      
       const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-
-      const alertMsg = `🚨 <b>CẢNH BÁO ĐĂNG NHẬP ADMIN</b> 🚨\n\nTài khoản: <b>${user.email}</b>\nIP: <code>${ip}</code>\nThiết bị: <i>${readableDevice}</i>\nThời gian: ${timeStr}\nMã TB: <code>${deviceId}</code>`
-      
       const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8828705964:AAFTVrQrj2skrLCwVjnCiZax0Nex67wsq84'
       const CHAT_ID = process.env.TELEGRAM_CHAT_ID || '8846573144'
-      
-      const replyMarkup = {
-        inline_keyboard: [[{ text: "🛑 Chặn Thiết bị này ngay lập tức", callback_data: `block_dev_${deviceId}_${user.id}` }]]
+
+      // Check Trusted Device
+      const trustedSetting = await prisma.siteSetting.findUnique({ where: { key: 'trusted_devices' } })
+      let trustedList: string[] = []
+      if (trustedSetting) {
+        try { trustedList = JSON.parse(trustedSetting.value) } catch (e) {}
       }
-      
-      try {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: CHAT_ID, text: alertMsg, parse_mode: 'HTML', reply_markup: replyMarkup })
+
+      if (!trustedList.includes(deviceId)) {
+        // Device NOT trusted -> Require 2FA
+        const otp = Math.floor(100000 + Math.random() * 900000).toString()
+        const expires = Date.now() + 20 * 60 * 1000
+        
+        await prisma.siteSetting.upsert({
+          where: { key: `otp_${user.id}` },
+          update: { value: JSON.stringify({ otp, expires }) },
+          create: { key: `otp_${user.id}`, value: JSON.stringify({ otp, expires }) }
         })
-      } catch (e) { console.error('Telegram alert failed:', e) }
+
+        // Send OTP via Telegram
+        const otpMsg = `🔐 <b>YÊU CẦU ĐĂNG NHẬP ADMIN (THIẾT BỊ LẠ)</b> 🔐\n\nTài khoản: <b>${user.email}</b>\nIP: <code>${ip}</code>\nThiết bị: <i>${readableDevice}</i>\nThời gian: ${timeStr}\n\n👉 MÃ OTP CỦA BẠN LÀ: <code>${otp}</code>\n<i>(Mã có hiệu lực 20 phút)</i>`
+        try {
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: CHAT_ID, text: otpMsg, parse_mode: 'HTML' })
+          })
+        } catch (e) {}
+
+        // Optionally Send OTP via Email (if configured)
+        try {
+          const { sendMail } = await import('@/lib/mailer')
+          await sendMail({
+            to: user.email,
+            subject: 'Mã Xác Minh Đăng Nhập Admin',
+            html: `<h3>Mã xác minh của bạn là: <b>${otp}</b></h3><p>Mã này có hiệu lực trong 20 phút. Vui lòng không chia sẻ cho bất kỳ ai.</p>`
+          })
+        } catch (e) {}
+
+        return NextResponse.json({ requires2FA: true, userId: user.id })
+      } else {
+        // Device Trusted -> Normal Alert
+        const alertMsg = `🚨 <b>CẢNH BÁO ĐĂNG NHẬP ADMIN</b> 🚨\n\nTài khoản: <b>${user.email}</b>\nIP: <code>${ip}</code>\nThiết bị: <i>${readableDevice}</i>\nThời gian: ${timeStr}\nMã TB: <code>${deviceId}</code>\n\n🛡️ <i>Thiết bị này đã được tin cậy.</i>`
+        const replyMarkup = {
+          inline_keyboard: [[{ text: "🛑 Chặn Thiết bị này ngay lập tức", callback_data: `block_dev_${deviceId}_${user.id}` }]]
+        }
+        try {
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: CHAT_ID, text: alertMsg, parse_mode: 'HTML', reply_markup: replyMarkup })
+          })
+        } catch (e) { console.error('Telegram alert failed:', e) }
+      }
     }
+
+    // Normal Login (Non-Admin or Trusted Admin)
+    const token = await signToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    })
+    await setAuthCookie(token)
 
     return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } })
   } catch (error) {

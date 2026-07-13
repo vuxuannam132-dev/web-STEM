@@ -19,6 +19,11 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [guestName, setGuestName] = useState('')
   const [guestLoading, setGuestLoading] = useState(false)
+  
+  // 2FA state
+  const [requires2FA, setRequires2FA] = useState(false)
+  const [userId, setUserId] = useState('')
+  const [otp, setOtp] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,6 +48,13 @@ export default function LoginPage() {
         return
       }
 
+      if (data.requires2FA) {
+        setRequires2FA(true)
+        setUserId(data.userId)
+        toast.success('Mã OTP đã được gửi đến Telegram của bạn')
+        return
+      }
+
       toast.success('Đăng nhập thành công!')
       await refetch()
       if (data.user.role === 'ADMIN') {
@@ -50,6 +62,34 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard')
       }
+    } catch {
+      setError('Đã xảy ra lỗi. Vui lòng thử lại.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, otp }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+        return
+      }
+
+      toast.success('Xác minh thành công!')
+      await refetch()
+      router.push('/admin')
     } catch {
       setError('Đã xảy ra lỗi. Vui lòng thử lại.')
     } finally {
@@ -102,40 +142,75 @@ export default function LoginPage() {
           <p className="text-slate-500 text-sm mt-1">STEM Đoàn Kết-Hai Bà Trưng</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <GlassInput
-            label="Email"
-            type="email"
-            placeholder="email@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <GlassInput
-            label="Mật khẩu"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            showPasswordToggle
-          />
-          <div className="flex justify-end mt-1">
-            <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 transition-colors">
-              Quên mật khẩu?
-            </Link>
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-red-700 text-sm">
-              {error}
+        {!requires2FA ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <GlassInput
+              label="Email"
+              type="email"
+              placeholder="email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <GlassInput
+              label="Mật khẩu"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              showPasswordToggle
+            />
+            <div className="flex justify-end mt-1">
+              <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 transition-colors">
+                Quên mật khẩu?
+              </Link>
             </div>
-          )}
 
-          <GlassButton type="submit" variant="primary" size="lg" loading={loading} className="w-full">
-            Đăng nhập
-          </GlassButton>
-        </form>
+            {error && (
+              <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            <GlassButton type="submit" variant="primary" size="lg" loading={loading} className="w-full">
+              Đăng nhập
+            </GlassButton>
+          </form>
+        ) : (
+          <form onSubmit={handleVerify2FA} className="space-y-4">
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4 text-center text-sm text-blue-800">
+              <span className="font-semibold block mb-1">Xác minh bảo mật (2FA)</span>
+              Vì bạn đang đăng nhập từ thiết bị lạ, một mã OTP đã được gửi đến Telegram (và Email). Hãy nhập mã để tiếp tục.
+            </div>
+            <GlassInput
+              label="Mã OTP (6 số)"
+              type="text"
+              placeholder="123456"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              required
+              maxLength={6}
+            />
+            
+            {error && (
+              <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            <GlassButton type="submit" variant="primary" size="lg" loading={loading} className="w-full">
+              Xác minh
+            </GlassButton>
+            <button 
+              type="button" 
+              onClick={() => { setRequires2FA(false); setOtp(''); setError(''); }}
+              className="w-full mt-2 text-sm text-slate-500 hover:text-slate-700"
+            >
+              Quay lại đăng nhập
+            </button>
+          </form>
+        )}
 
         <p className="text-center text-slate-500 text-sm mt-6">
           Chưa có tài khoản?{' '}
