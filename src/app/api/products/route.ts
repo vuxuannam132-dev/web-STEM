@@ -59,6 +59,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
     }
 
+    // Block guests from posting
+    if (session.role === 'GUEST') {
+      return NextResponse.json({ error: 'Tài khoản Khách không có quyền đăng sản phẩm. Vui lòng đăng ký tài khoản chính thức.' }, { status: 403 })
+    }
+
     const body = await request.json()
     const validated = productSchema.safeParse(body)
 

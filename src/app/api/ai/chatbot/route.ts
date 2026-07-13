@@ -20,14 +20,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Không tìm thấy người dùng.' }, { status: 404 })
     }
 
-    // Rate limit: 10 queries/day
+    // Rate limit based on role
     const now = new Date()
     const isToday = user.lastAiQueryDate?.toDateString() === now.toDateString()
     const currentCount = isToday ? user.aiQueryCount : 0
 
-    if (currentCount >= 10) {
+    // Guest: 5 queries total (not per day), User: 10/day
+    const maxQueries = user.role === 'GUEST' ? 5 : 10
+
+    if (user.role === 'GUEST' && user.aiQueryCount >= 5) {
       return NextResponse.json({
-        error: 'Bạn đã hết 10 lượt hỏi đáp AI hôm nay. Vui lòng quay lại vào ngày mai!',
+        error: 'Bạn đã hết 5 lượt hỏi đáp AI miễn phí dành cho Khách. Hãy đăng ký tài khoản để tiếp tục sử dụng!',
+      }, { status: 429 })
+    }
+
+    if (user.role !== 'GUEST' && currentCount >= maxQueries) {
+      return NextResponse.json({
+        error: `Bạn đã hết ${maxQueries} lượt hỏi đáp AI hôm nay. Vui lòng quay lại vào ngày mai!`,
       }, { status: 429 })
     }
 
@@ -69,17 +78,22 @@ export async function POST(request: NextRequest) {
     const reply = completion.choices[0]?.message?.content || 'Xin lỗi, tôi chưa thể trả lời câu hỏi này.'
 
     // Update rate limit
+    const newCount = user.role === 'GUEST' ? user.aiQueryCount + 1 : currentCount + 1
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        aiQueryCount: currentCount + 1,
+        aiQueryCount: newCount,
         lastAiQueryDate: now,
       }
     })
 
+    const remaining = user.role === 'GUEST' 
+      ? 5 - newCount 
+      : maxQueries - newCount
+
     return NextResponse.json({
       reply,
-      remainingQueries: 9 - currentCount,
+      remainingQueries: remaining,
     })
   } catch (error: any) {
     console.error('AI Chatbot Error:', error)

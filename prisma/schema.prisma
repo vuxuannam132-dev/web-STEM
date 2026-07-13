@@ -26,6 +26,7 @@ model User {
   resetToken     String?
   resetExpiry    DateTime?
   isLocked       Boolean   @default(false)
+  expiresAt      DateTime?
 }
 
 model ActivityLog {
@@ -68,4 +69,14 @@ model SiteSetting {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model PendingRegistration {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  verifyCode   String
+  verifyExpiry DateTime
+  createdAt    DateTime @default(now())
 }

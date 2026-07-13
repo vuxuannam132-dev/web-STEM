@@ -61,6 +61,7 @@ export default function AiChatWidget() {
   const [showMathDropdown, setShowMathDropdown] = useState(false)
   const [showCodeDropdown, setShowCodeDropdown] = useState(false)
   const [showIntro, setShowIntro] = useState(true)
+  const [showTooltip, setShowTooltip] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -137,6 +138,17 @@ export default function AiChatWidget() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // AI tooltip every 2 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isOpen) {
+        setShowTooltip(true)
+        setTimeout(() => setShowTooltip(false), 5000)
+      }
+    }, 120000)
+    return () => clearInterval(interval)
+  }, [isOpen])
+
   const selectedSubject = SUBJECTS.find(s => s.key === subject)!
   const selectedMode = EXPLAIN_MODES.find(m => m.key === explainMode)!
 
@@ -193,9 +205,22 @@ export default function AiChatWidget() {
 
   return (
     <>
+      {/* AI Tooltip */}
+      {showTooltip && !isOpen && (
+        <div className="fixed bottom-8 right-24 z-[99] animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl px-4 py-3 text-sm text-slate-700 font-medium max-w-[220px] border border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🤖</span>
+              <span>Tôi là AI, hãy hỏi tôi bất cứ điều gì bạn thắc mắc nhé!</span>
+            </div>
+            <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-r border-b border-slate-100 rotate-[-45deg]" />
+          </div>
+        </div>
+      )}
+
       {/* Floating Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => { setShowTooltip(false); setIsOpen(!isOpen); }}
         className={`fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 shadow-lg hover:shadow-xl hover:scale-110 ${
           isOpen
             ? 'bg-white/10 backdrop-blur-xl border border-white/20 rotate-90'

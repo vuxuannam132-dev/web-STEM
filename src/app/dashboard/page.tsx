@@ -65,12 +65,14 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 text-sm mt-1">Xin chào, {user?.name}!</p>
         </div>
-        <Link href="/dashboard/products/new">
-          <GlassButton variant="primary" className="gap-2">
-            <Plus className="w-4 h-4" />
-            Đăng sản phẩm
-          </GlassButton>
-        </Link>
+        {user?.role !== 'GUEST' && (
+          <Link href="/dashboard/products/new">
+            <GlassButton variant="primary" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Đăng sản phẩm
+            </GlassButton>
+          </Link>
+        )}
       </div>
 
       {/* Stats */}

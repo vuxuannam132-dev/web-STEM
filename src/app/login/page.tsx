@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [guestLoading, setGuestLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,6 +54,36 @@ export default function LoginPage() {
       setError('Đã xảy ra lỗi. Vui lòng thử lại.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGuestLogin = async () => {
+    if (!guestName.trim()) {
+      toast.error('Vui lòng nhập tên của bạn')
+      return
+    }
+
+    setGuestLoading(true)
+    try {
+      const res = await fetch('/api/auth/guest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: guestName.trim() }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        toast.error(data.error)
+        return
+      }
+
+      toast.success('Chào mừng bạn!')
+      await refetch()
+      router.push('/dashboard')
+    } catch {
+      toast.error('Đã xảy ra lỗi. Vui lòng thử lại.')
+    } finally {
+      setGuestLoading(false)
     }
   }
 
@@ -111,6 +143,37 @@ export default function LoginPage() {
             Đăng ký ngay
           </Link>
         </p>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-slate-200" />
+          <span className="text-slate-400 text-sm font-medium">hoặc</span>
+          <div className="flex-1 h-px bg-slate-200" />
+        </div>
+
+        {/* Guest Login */}
+        <div className="space-y-3">
+          <p className="text-center text-slate-600 text-sm font-medium">
+            🎓 Trải nghiệm với tư cách Khách
+          </p>
+          <GlassInput
+            label="Tên của bạn"
+            type="text"
+            placeholder="Nhập tên hiển thị..."
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+          />
+          <GlassButton
+            type="button"
+            variant="secondary"
+            size="lg"
+            loading={guestLoading}
+            className="w-full"
+            onClick={handleGuestLogin}
+          >
+            Vào với tư cách Khách
+          </GlassButton>
+        </div>
       </GlassCard>
     </div>
   )
