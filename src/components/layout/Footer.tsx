@@ -27,7 +27,7 @@ export default function Footer() {
               Địa chỉ: Số 174 Hồng Mai, phường Quỳnh Lôi, quận Hai Bà Trưng, thành phố Hà Nội.
             </p>
             <p className="text-slate-500 text-xs mt-2">
-              © 2026 Dev by Vũ Xuân Nam D2K64 trường THPT Đoàn Kết-Hai Bà Trưng kính tặng.
+              © 2026 Dev by Vũ Xuân Nam D2K64 trường THPT Đoàn Kết-Hai Bà Trưng kính tặng!
             </p>
           </div>
         </div>
