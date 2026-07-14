@@ -106,6 +106,37 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Send Telegram Notification
+    try {
+      const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8828705964:AAFTVrQrj2skrLCwVjnCiZax0Nex67wsq84'
+      const CHAT_ID = process.env.TELEGRAM_CHAT_ID || '8846573144'
+      
+      const user = await prisma.user.findUnique({ where: { id: session.userId } })
+      
+      const msg = `📦 <b>BÀI ĐĂNG MỚI CẦN DUYỆT</b> 📦\n\nTiêu đề: <b>${product.title}</b>\nTác giả: ${user?.name} (${user?.email})\nDanh mục: ${product.category}\n\nĐang chờ duyệt...`
+      const replyMarkup = {
+        inline_keyboard: [
+          [
+            { text: "✅ Duyệt", callback_data: `product_approve_${product.id}` },
+            { text: "❌ Từ chối", callback_data: `product_reject_${product.id}` }
+          ]
+        ]
+      }
+      
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: msg,
+          parse_mode: 'HTML',
+          reply_markup: replyMarkup
+        })
+      })
+    } catch (e) {
+      console.error('Failed to send Telegram product approval request', e)
+    }
+
     return NextResponse.json({ product })
   } catch (error) {
     console.error('Create product error:', error)

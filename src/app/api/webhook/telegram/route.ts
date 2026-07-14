@@ -47,6 +47,7 @@ const menus = {
     inline_keyboard: [
       [{ text: "📊 Báo cáo Hệ thống", callback_data: "menu_report" }, { text: "🤖 Lượt dùng AI", callback_data: "menu_ai" }],
       [{ text: "👥 Quản lý Người dùng", callback_data: "menu_users" }, { text: "📝 Nhật ký Logs", callback_data: "menu_logs" }],
+      [{ text: "📦 Quản lý Bài đăng", callback_data: "menu_products" }],
       [{ text: "🛡️ Quản lý Sổ Trắng", callback_data: "menu_whitelist" }, { text: "📱 Quản lý Sổ Đen", callback_data: "menu_blacklist" }],
       [{ text: "⚙️ Cài đặt Web", callback_data: "menu_settings" }]
     ]
@@ -108,6 +109,7 @@ async function auth(chatId: number, text?: string): Promise<boolean> {
         [{ text: "🚀 Bắt đầu" }],
         [{ text: "📊 Báo cáo Hệ thống" }, { text: "🤖 Lượt dùng AI" }],
         [{ text: "👥 Quản lý Người dùng" }, { text: "📝 Nhật ký Logs" }],
+        [{ text: "📦 Quản lý Bài đăng" }],
         [{ text: "🛡️ Quản lý Sổ Trắng" }, { text: "📱 Quản lý Sổ Đen" }],
         [{ text: "⚙️ Cài đặt Web" }]
       ],
@@ -143,6 +145,7 @@ export async function POST(request: NextRequest) {
         '📊 Báo cáo hệ thống': 'menu_report',
         '📊 Báo cáo Hệ thống': 'menu_report',
         '🤖 Lượt dùng AI': 'menu_ai',
+        '📦 Quản lý Bài đăng': 'menu_products',
         '👥 Quản lý Người dùng': 'menu_users',
         '👥 Người dùng': 'menu_users',
         '📝 Xem 5 Logs gần nhất': 'menu_logs',
@@ -159,6 +162,7 @@ export async function POST(request: NextRequest) {
             [{ text: "🚀 Bắt đầu" }],
             [{ text: "📊 Báo cáo Hệ thống" }, { text: "🤖 Lượt dùng AI" }],
             [{ text: "👥 Quản lý Người dùng" }, { text: "📝 Nhật ký Logs" }],
+            [{ text: "📦 Quản lý Bài đăng" }],
             [{ text: "🛡️ Quản lý Sổ Trắng" }, { text: "📱 Quản lý Sổ Đen" }],
             [{ text: "⚙️ Cài đặt Web" }]
           ],
@@ -540,6 +544,55 @@ export async function POST(request: NextRequest) {
           
           const oldMsgText = cb.message?.text || ''
           await editMessage(chatId, messageId, `❌ <b>ĐÃ TỪ CHỐI YÊU CẦU AI</b>\n\n${oldMsgText}`)
+        }
+      }
+      else if (data === 'menu_products') {
+        const pending = await prisma.product.findMany({ where: { status: 'PENDING' }, orderBy: { createdAt: 'desc' }, take: 10 })
+        if (pending.length === 0) {
+          await editMessage(chatId, messageId, '📦 <b>QUẢN LÝ BÀI ĐĂNG</b>\n\nHiện không có bài đăng nào đang chờ duyệt.', menus.backToMain)
+        } else {
+          const buttons = pending.map(p => [{ text: `⏳ ${p.title.substring(0,25)}...`, callback_data: `product_view_${p.id}` }])
+          buttons.push([{ text: "🔙 Quay lại", callback_data: "menu_main" }])
+          await editMessage(chatId, messageId, `📦 <b>BÀI ĐĂNG CHỜ DUYỆT (${pending.length})</b>\n\nChọn để xem chi tiết:`, { inline_keyboard: buttons })
+        }
+      }
+      else if (data.startsWith('product_view_')) {
+        const pid = data.replace('product_view_', '')
+        const p = await prisma.product.findUnique({ where: { id: pid }, include: { owner: true } })
+        if (!p) {
+          await answerCallback(cb.id, 'Sản phẩm không tồn tại!')
+        } else {
+          const msg = `📦 <b>BÀI ĐĂNG CẦN DUYỆT</b> 📦\n\nTiêu đề: <b>${p.title}</b>\nTác giả: ${p.owner.name} (${p.owner.email})\nDanh mục: ${p.category}\nTrạng thái: ${p.status}`
+          const menu = {
+            inline_keyboard: [
+              p.status === 'PENDING' ? [
+                { text: "✅ Duyệt", callback_data: `product_approve_${p.id}` },
+                { text: "❌ Từ chối", callback_data: `product_reject_${p.id}` }
+              ] : [],
+              [{ text: "🔙 Trở lại Danh sách", callback_data: "menu_products" }]
+            ]
+          }
+          await editMessage(chatId, messageId, msg, menu)
+        }
+      }
+      else if (data.startsWith('product_approve_')) {
+        const pid = data.replace('product_approve_', '')
+        const p = await prisma.product.findUnique({ where: { id: pid } })
+        if (p && p.status === 'PENDING') {
+          await prisma.product.update({ where: { id: pid }, data: { status: 'APPROVED' } })
+          await answerCallback(cb.id, 'Đã duyệt bài đăng!')
+          const oldMsgText = cb.message?.text || ''
+          await editMessage(chatId, messageId, `✅ <b>ĐÃ DUYỆT BÀI ĐĂNG</b>\n\n${oldMsgText}`, { inline_keyboard: [[{ text: "🔙 Quản lý bài đăng", callback_data: "menu_products" }]] })
+        }
+      }
+      else if (data.startsWith('product_reject_')) {
+        const pid = data.replace('product_reject_', '')
+        const p = await prisma.product.findUnique({ where: { id: pid } })
+        if (p && p.status === 'PENDING') {
+          await prisma.product.update({ where: { id: pid }, data: { status: 'REJECTED' } })
+          await answerCallback(cb.id, 'Đã từ chối bài đăng!')
+          const oldMsgText = cb.message?.text || ''
+          await editMessage(chatId, messageId, `❌ <b>ĐÃ TỪ CHỐI BÀI ĐĂNG</b>\n\n${oldMsgText}`, { inline_keyboard: [[{ text: "🔙 Quản lý bài đăng", callback_data: "menu_products" }]] })
         }
       }
     }
