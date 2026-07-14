@@ -183,6 +183,33 @@ export async function POST(request: NextRequest) {
           create: { key: 'admin_otp_email', value: newEmail }
         })
         await reply(chatId, `✅ <b>Cập nhật thành công!</b>\n\nEmail nhận OTP Admin đã được đổi thành: <code>${newEmail}</code>`)
+      } else if (text.startsWith('/add_ai ')) {
+        const parts = text.replace('/add_ai ', '').trim().split(' ')
+        if (parts.length < 2) {
+          await reply(chatId, '❌ <b>Sai cú pháp!</b>\n\nSử dụng: <code>/add_ai [email] [lượt]</code>')
+        } else {
+          const email = parts[0]
+          const amount = parseInt(parts[1]) || 0
+          if (amount <= 0) {
+            await reply(chatId, '❌ <b>Số lượt không hợp lệ!</b>')
+          } else {
+            const user = await prisma.user.findUnique({ where: { email } })
+            if (!user) {
+              await reply(chatId, `❌ Không tìm thấy user với email: <code>${email}</code>`)
+            } else {
+              await prisma.user.update({
+                where: { email },
+                data: {
+                  aiQueryLimit: user.aiQueryLimit + amount,
+                  hasUnreadAiNotification: true,
+                  unreadAiAmount: amount,
+                  pendingAiRequest: false
+                }
+              })
+              await reply(chatId, `✅ <b>THÀNH CÔNG!</b>\n\nĐã cộng ${amount} lượt hỏi AI cho user <b>${user.name}</b> (<code>${email}</code>).`)
+            }
+          }
+        }
       } else if (menuMap[text]) {
         // Chuyển hướng xử lý sang callback_query
         body.callback_query = {
@@ -487,7 +514,9 @@ export async function POST(request: NextRequest) {
             where: { id: uid },
             data: { 
               aiQueryLimit: user.aiQueryLimit + amount,
-              pendingAiRequest: false
+              pendingAiRequest: false,
+              hasUnreadAiNotification: true,
+              unreadAiAmount: amount
             }
           })
           await answerCallback(cb.id, `Đã cấp thêm ${amount} lượt cho user!`)

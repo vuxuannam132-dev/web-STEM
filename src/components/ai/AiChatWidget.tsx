@@ -64,6 +64,8 @@ export default function AiChatWidget() {
   const [showCodeDropdown, setShowCodeDropdown] = useState(false)
   const [showIntro, setShowIntro] = useState(true)
   const [showTooltip, setShowTooltip] = useState(false)
+  const [aiNotification, setAiNotification] = useState<{show: boolean, amount: number}>({show: false, amount: 0})
+  
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -95,6 +97,22 @@ export default function AiChatWidget() {
     }
     scrollToBottom()
   }, [messages, loading])
+
+  // Poll for AI Notifications
+  useEffect(() => {
+    if (!user) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/user/ai-notification')
+        const data = await res.json()
+        if (data.hasNotification) {
+          setAiNotification({ show: true, amount: data.amount })
+          setTimeout(() => setAiNotification({ show: false, amount: 0 }), 10000) // Hide after 10s
+        }
+      } catch (e) {}
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [user])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -231,6 +249,24 @@ export default function AiChatWidget() {
 
   return (
     <>
+      {/* AI Notification Popup */}
+      {aiNotification.show && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] animate-slide-down">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-2xl p-4 border border-white/20 flex items-center gap-4 text-white max-w-[90vw] w-[320px]">
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-yellow-300" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-sm">Quà từ Admin! 🎁</h4>
+              <p className="text-xs text-blue-100 mt-0.5">Bạn vừa được cộng thêm <b>{aiNotification.amount}</b> lượt hỏi AI.</p>
+            </div>
+            <button onClick={() => setAiNotification({show: false, amount: 0})} className="p-1 rounded-full hover:bg-white/20 self-start">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* AI Tooltip */}
       {showTooltip && !isOpen && (
         <div className="fixed bottom-8 right-24 z-[99] animate-fade-in">

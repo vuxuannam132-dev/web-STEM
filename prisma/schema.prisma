@@ -20,6 +20,8 @@ model User {
   aiQueryLimit   Int       @default(10)
   pendingAiRequest Boolean @default(false)
   lastAiQueryDate DateTime?
+  hasUnreadAiNotification Boolean @default(false)
+  unreadAiAmount          Int     @default(0)
   products       Product[]
   
   isVerified     Boolean   @default(false)
