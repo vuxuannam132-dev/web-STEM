@@ -185,6 +185,10 @@ export default function AiChatBox({ productContext }: { productContext: any }) {
           <Send className="w-4 h-4" />
         </GlassButton>
       </form>
+      
+      <p className="text-[10px] text-center text-slate-400 mt-3 font-medium">
+        AI có thể mắc sai sót, vui lòng kiểm chứng thông tin trước khi tiếp thu.
+      </p>
     </GlassCard>
   )
 }
