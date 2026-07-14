@@ -23,9 +23,14 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const isToday = user.lastAiQueryDate?.toDateString() === now.toDateString()
     let currentCount = isToday ? user.aiQueryCount : 0
+    const maxQueries = user.role === 'GUEST' ? 5 : user.aiQueryLimit
 
-    if (currentCount >= 10) {
-      return NextResponse.json({ error: 'Bạn đã hết 10 lượt hỏi đáp trong ngày hôm nay. Vui lòng quay lại vào ngày mai!' }, { status: 429 })
+    if (currentCount >= maxQueries) {
+      return NextResponse.json({ 
+        error: `Bạn đã hết ${maxQueries} lượt hỏi đáp trong ngày hôm nay. Vui lòng xin thêm lượt hoặc quay lại vào ngày mai!`,
+        outOfQueries: true,
+        pendingRequest: user.pendingAiRequest
+      }, { status: 429 })
     }
 
     const body = await request.json()
@@ -70,7 +75,7 @@ Hãy trả lời ngắn gọn, thân thiện, dễ hiểu, phù hợp với họ
 
     return NextResponse.json({ 
       reply,
-      remainingQueries: 9 - currentCount // Since we just used 1, remaining is 10 - (currentCount + 1) = 9 - currentCount
+      remainingQueries: maxQueries - currentCount - 1
     })
   } catch (error: any) {
     console.error('AI Chat Error:', error)

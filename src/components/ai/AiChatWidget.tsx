@@ -15,6 +15,8 @@ import 'katex/dist/katex.min.css'
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  isOutOfQueries?: boolean
+  pendingRequest?: boolean
 }
 
 const mathSymbols = [
@@ -159,6 +161,25 @@ export default function AiChatWidget() {
     }
   }
 
+  const requestMoreQueries = async (msgIndex: number) => {
+    try {
+      const res = await fetch('/api/ai/request-queries', { method: 'POST' })
+      const data = await res.json()
+      if (data.error) {
+        toast.error(data.error)
+      } else {
+        toast.success('Đã gửi yêu cầu đến Admin!')
+        setMessages(prev => {
+          const newMsgs = [...prev]
+          newMsgs[msgIndex] = { ...newMsgs[msgIndex], pendingRequest: true }
+          return newMsgs
+        })
+      }
+    } catch (e) {
+      toast.error('Lỗi khi gửi yêu cầu.')
+    }
+  }
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || loading) return
@@ -187,8 +208,13 @@ export default function AiChatWidget() {
       const data = await res.json()
 
       if (data.error) {
-        toast.error(data.error)
-        setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${data.error}` }])
+        toast.error('Lỗi: Bạn đã hết lượt hoặc có lỗi xảy ra.')
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `⚠️ ${data.error}`,
+          isOutOfQueries: data.outOfQueries,
+          pendingRequest: data.pendingRequest
+        }])
         return
       }
 
@@ -297,16 +323,29 @@ export default function AiChatWidget() {
                   {msg.role === 'user' ? (
                     <p className="whitespace-pre-wrap m-0">{msg.content}</p>
                   ) : (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                    >
-                      {msg.content
-                        .replace(/\\\[/g, '$$$$')
-                        .replace(/\\\]/g, '$$$$')
-                        .replace(/\\\(/g, '$$')
-                        .replace(/\\\)/g, '$$')}
-                    </ReactMarkdown>
+                    <div>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
+                      >
+                        {msg.content
+                          .replace(/\\\[/g, '$$$$')
+                          .replace(/\\\]/g, '$$$$')
+                          .replace(/\\\(/g, '$$')
+                          .replace(/\\\)/g, '$$')}
+                      </ReactMarkdown>
+                      {msg.isOutOfQueries && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => requestMoreQueries(i)}
+                            disabled={msg.pendingRequest}
+                            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-sm"
+                          >
+                            {msg.pendingRequest ? '⏳ Đã gửi yêu cầu (Chờ duyệt)' : '🚀 Yêu cầu thêm lượt'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

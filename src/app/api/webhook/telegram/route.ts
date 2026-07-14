@@ -476,6 +476,43 @@ export async function POST(request: NextRequest) {
         }
         await editMessage(chatId, messageId, `🛡️ <b>THIẾT BỊ ĐÃ ĐƯỢC TIN CẬY</b>\n\n${oldMsgText}`, newMarkup)
       }
+      else if (data.startsWith('ai_approve_')) {
+        const parts = data.split('_')
+        const uid = parts[2]
+        const amount = parseInt(parts[3])
+
+        const user = await prisma.user.findUnique({ where: { id: uid } })
+        if (user) {
+          await prisma.user.update({
+            where: { id: uid },
+            data: { 
+              aiQueryLimit: user.aiQueryLimit + amount,
+              pendingAiRequest: false
+            }
+          })
+          await answerCallback(cb.id, `Đã cấp thêm ${amount} lượt cho user!`)
+          
+          const oldMsgText = cb.message?.text || ''
+          await editMessage(chatId, messageId, `✅ <b>ĐÃ DUYỆT +${amount} LƯỢT AI</b>\n\n${oldMsgText}`)
+        } else {
+          await answerCallback(cb.id, 'User không tồn tại!')
+        }
+      }
+      else if (data.startsWith('ai_reject_')) {
+        const uid = data.replace('ai_reject_', '')
+        
+        const user = await prisma.user.findUnique({ where: { id: uid } })
+        if (user) {
+          await prisma.user.update({
+            where: { id: uid },
+            data: { pendingAiRequest: false }
+          })
+          await answerCallback(cb.id, 'Đã từ chối yêu cầu!')
+          
+          const oldMsgText = cb.message?.text || ''
+          await editMessage(chatId, messageId, `❌ <b>ĐÃ TỪ CHỐI YÊU CẦU AI</b>\n\n${oldMsgText}`)
+        }
+      }
     }
 
     return NextResponse.json({ ok: true })

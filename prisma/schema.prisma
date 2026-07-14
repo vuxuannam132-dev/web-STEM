@@ -17,6 +17,8 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   aiQueryCount   Int       @default(0)
+  aiQueryLimit   Int       @default(10)
+  pendingAiRequest Boolean @default(false)
   lastAiQueryDate DateTime?
   products       Product[]
   

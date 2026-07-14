@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     const isToday = user.lastAiQueryDate?.toDateString() === now.toDateString()
     const currentCount = isToday ? user.aiQueryCount : 0
 
-    // Guest: 5 queries total (not per day), User: 10/day
-    const maxQueries = user.role === 'GUEST' ? 5 : 10
+    // Guest: 5 queries total (not per day), User: uses their dynamic limit
+    const maxQueries = user.role === 'GUEST' ? 5 : user.aiQueryLimit
 
     if (user.role === 'GUEST' && user.aiQueryCount >= 5) {
       return NextResponse.json({
@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
 
     if (user.role !== 'GUEST' && currentCount >= maxQueries) {
       return NextResponse.json({
-        error: `Bạn đã hết ${maxQueries} lượt hỏi đáp AI hôm nay. Vui lòng quay lại vào ngày mai!`,
+        error: `Bạn đã hết ${maxQueries} lượt hỏi đáp AI hôm nay. Vui lòng xin thêm lượt hoặc quay lại vào ngày mai!`,
+        outOfQueries: true,
+        pendingRequest: user.pendingAiRequest
       }, { status: 429 })
     }
 
