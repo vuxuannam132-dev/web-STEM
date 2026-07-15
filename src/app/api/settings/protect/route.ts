@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const revalidate = 10 // Cache response on Vercel CDN for 10s to prevent DB crash during DDoS
+
 export async function GET() {
   try {
     const setting = await prisma.siteSetting.findUnique({

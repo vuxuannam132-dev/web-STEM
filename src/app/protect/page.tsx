@@ -10,7 +10,7 @@ export default function ProtectPage() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch('/api/settings/protect', { cache: 'no-store' })
+        const res = await fetch('/api/settings/protect', { next: { revalidate: 10 } })
         if (res.ok) {
           const { protectMode } = await res.json()
           if (!protectMode) {
