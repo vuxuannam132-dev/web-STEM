@@ -6,6 +6,8 @@ import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { Menu, X, User, LayoutDashboard, LogOut, Shield, BookOpen } from 'lucide-react'
 
+import { usePathname } from 'next/navigation'
+
 const NAV_ITEMS = [
   { href: '/', label: 'Trang Chủ' },
   { href: '/category/TOAN_LY_TIN', label: 'Tổ Toán - Lý - Tin' },
@@ -15,10 +17,13 @@ const NAV_ITEMS = [
 ]
 
 export default function Navbar() {
+  const pathname = usePathname()
   const { user, loading, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [ieltsConfig, setIeltsConfig] = useState({ show: false, url: '' })
+
+  if (pathname === '/protect') return null
 
   React.useEffect(() => {
     fetch('/api/settings')

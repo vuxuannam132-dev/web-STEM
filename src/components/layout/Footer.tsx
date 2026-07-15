@@ -1,7 +1,13 @@
+'use client'
+
 import React from 'react'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 
 export default function Footer() {
+  const pathname = usePathname()
+  if (pathname === '/protect') return null
+
   return (
     <footer className="mt-20">
       <div className="glass-card rounded-t-3xl border-b-0 py-12 px-6">
