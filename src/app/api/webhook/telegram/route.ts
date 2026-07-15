@@ -100,7 +100,7 @@ async function getBotConfig() {
   const settings = await prisma.siteSetting.findMany({
     where: { key: { in: ['telegram_bot_password', 'telegram_admin_ids'] } }
   })
-  let password = 'Vunam15022009@dkhbt'
+  let password = 'Vunamdkhbt2009@'
   let adminIds: string[] = []
   
   for (const s of settings) {
