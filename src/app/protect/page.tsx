@@ -1,12 +1,28 @@
-import React from 'react'
-import { ShieldAlert, Activity, Server, Lock } from 'lucide-react'
+'use client'
 
-export const metadata = {
-  title: 'Hệ thống Đang Được Bảo Vệ - STEM',
-  description: 'Website đang trong chế độ bảo vệ dữ liệu cao nhất.',
-}
+import React, { useEffect } from 'react'
+import { ShieldAlert, Activity, Server, Lock } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export default function ProtectPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/settings/protect', { cache: 'no-store' })
+        if (res.ok) {
+          const { protectMode } = await res.json()
+          if (!protectMode) {
+            window.location.href = '/' // Force a full reload to clear any cached states
+          }
+        }
+      } catch (e) {}
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 overflow-hidden relative">
       {/* Animated background grid */}

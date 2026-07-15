@@ -50,7 +50,10 @@ const codeHelpers = [
   { display: 'JS', value: '```javascript\n\n```', label: 'Code JavaScript' },
 ]
 
+import { usePathname } from 'next/navigation'
+
 export default function AiChatWidget() {
+  const pathname = usePathname()
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -58,6 +61,8 @@ export default function AiChatWidget() {
   const [loading, setLoading] = useState(false)
   const [subject, setSubject] = useState('stem')
   const [explainMode, setExplainMode] = useState('detailed')
+
+  if (pathname === '/protect') return null
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false)
   const [showModeDropdown, setShowModeDropdown] = useState(false)
   const [showMathDropdown, setShowMathDropdown] = useState(false)

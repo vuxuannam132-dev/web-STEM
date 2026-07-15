@@ -3,11 +3,15 @@
 import { useState } from 'react';
 import { AlertCircle, X, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePathname } from 'next/navigation';
 
 export default function BugReportWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  if (pathname === '/protect') return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
