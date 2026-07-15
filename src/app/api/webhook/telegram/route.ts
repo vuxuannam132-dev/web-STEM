@@ -42,12 +42,37 @@ async function answerCallback(callbackQueryId: string, text?: string) {
   }
 }
 
+async function getHealthReport(origin: string) {
+  try {
+    const res = await fetch(`${origin}/api/health`, { next: { revalidate: 0 } })
+    const h = await res.json()
+    let report = `🩺 <b>BÁO CÁO SỨC KHỎE HỆ THỐNG</b> 🩺\n\n`
+    report += `🖥️ <b>Hạ tầng (Infrastructure):</b>\n`
+    report += ` - Server: <code>${h.infrastructure.region}</code>\n`
+    report += ` - RAM: <code>${h.infrastructure.memoryUsageMB} MB</code>\n`
+    report += ` - Uptime: <code>${h.infrastructure.uptimeSecs}s</code>\n\n`
+    report += `🗄️ <b>Cơ sở dữ liệu (Database):</b>\n`
+    report += ` - Trạng thái: ${h.database.status === 'ONLINE' ? '🟢 ONLINE' : '🔴 OFFLINE'}\n`
+    report += ` - Ping DB: <code>${h.database.latencyMs}ms</code>\n`
+    report += ` - Records: <code>${h.database.totalUsers}</code> users, <code>${h.database.totalProducts}</code> sp\n\n`
+    report += `🌐 <b>Mạng (Network):</b>\n`
+    report += ` - Ping Server VN: <code>${h.network.pingVnMs > -1 ? h.network.pingVnMs + 'ms' : 'Timeout'}</code>\n\n`
+    report += `🛡️ <b>Bảo mật (Security):</b>\n`
+    report += ` - Protect Mode: ${h.security.protectMode ? '🔴 BẬT (CHẶN TOÀN CẦU)' : '🟢 TẮT'}\n\n`
+    report += (h.status === 'OK') ? `✅ <b>KẾT LUẬN: HỆ THỐNG HOẠT ĐỘNG TỐT</b>` : `⚠️ <b>KẾT LUẬN: ĐANG CÓ SỰ CỐ!</b>`
+    return report
+  } catch (e) {
+    return '❌ Lỗi khi lấy báo cáo sức khỏe hệ thống.'
+  }
+}
+
 const menus = {
   main: {
     inline_keyboard: [
       [{ text: "📊 Báo cáo Hệ thống", callback_data: "menu_report" }, { text: "🤖 Lượt dùng AI", callback_data: "menu_ai" }],
       [{ text: "👥 Quản lý Người dùng", callback_data: "menu_users" }, { text: "📝 Nhật ký Logs", callback_data: "menu_logs" }],
-      [{ text: "📦 Quản lý Bài đăng", callback_data: "menu_products" }],
+      [{ text: "📦 Quản lý Bài đăng", callback_data: "menu_products" }, { text: "🩺 Đo sức khỏe Web", callback_data: "menu_health" }],
+      [{ text: "🛡️ Bật/Tắt Protect Mode", callback_data: "menu_protect" }],
       [{ text: "🛡️ Quản lý Sổ Trắng", callback_data: "menu_whitelist" }, { text: "📱 Quản lý Sổ Đen", callback_data: "menu_blacklist" }],
       [{ text: "⚙️ Cài đặt Web", callback_data: "menu_settings" }]
     ]
@@ -109,7 +134,8 @@ async function auth(chatId: number, text?: string): Promise<boolean> {
         [{ text: "🚀 Bắt đầu" }],
         [{ text: "📊 Báo cáo Hệ thống" }, { text: "🤖 Lượt dùng AI" }],
         [{ text: "👥 Quản lý Người dùng" }, { text: "📝 Nhật ký Logs" }],
-        [{ text: "📦 Quản lý Bài đăng" }],
+        [{ text: "📦 Quản lý Bài đăng" }, { text: "🩺 Đo sức khỏe Web" }],
+        [{ text: "🛡️ Bật/Tắt Protect Mode" }],
         [{ text: "🛡️ Quản lý Sổ Trắng" }, { text: "📱 Quản lý Sổ Đen" }],
         [{ text: "⚙️ Cài đặt Web" }]
       ],
@@ -146,6 +172,8 @@ export async function POST(request: NextRequest) {
         '📊 Báo cáo Hệ thống': 'menu_report',
         '🤖 Lượt dùng AI': 'menu_ai',
         '📦 Quản lý Bài đăng': 'menu_products',
+        '🩺 Đo sức khỏe Web': 'menu_health',
+        '🛡️ Bật/Tắt Protect Mode': 'menu_protect',
         '👥 Quản lý Người dùng': 'menu_users',
         '👥 Người dùng': 'menu_users',
         '📝 Xem 5 Logs gần nhất': 'menu_logs',
@@ -162,7 +190,8 @@ export async function POST(request: NextRequest) {
             [{ text: "🚀 Bắt đầu" }],
             [{ text: "📊 Báo cáo Hệ thống" }, { text: "🤖 Lượt dùng AI" }],
             [{ text: "👥 Quản lý Người dùng" }, { text: "📝 Nhật ký Logs" }],
-            [{ text: "📦 Quản lý Bài đăng" }],
+            [{ text: "📦 Quản lý Bài đăng" }, { text: "🩺 Đo sức khỏe Web" }],
+            [{ text: "🛡️ Bật/Tắt Protect Mode" }],
             [{ text: "🛡️ Quản lý Sổ Trắng" }, { text: "📱 Quản lý Sổ Đen" }],
             [{ text: "⚙️ Cài đặt Web" }]
           ],
@@ -178,6 +207,8 @@ export async function POST(request: NextRequest) {
           })
         }
         
+        const healthReport = await getHealthReport(request.nextUrl.origin)
+        await reply(chatId, healthReport)
         await reply(chatId, '🌟 <b>MENU QUẢN TRỊ VIÊN</b> 🌟\n\nXin chào, Admin! Chọn một chức năng bên dưới:', menus.main)
       } else if (text.startsWith('/setemail ')) {
         const newEmail = text.replace('/setemail ', '').trim()
@@ -256,6 +287,30 @@ export async function POST(request: NextRequest) {
 
         const report = `📈 <b>BÁO CÁO NHANH:</b>\n\n▪️ Lượt xem SP: <b>${totalViews}</b>\n▪️ Sản phẩm: <b>${totalProducts}</b>\n▪️ Người dùng: <b>${totalUsers}</b>\n\n👥 <b>DANH SÁCH QUẢN TRỊ VIÊN:</b>\n${adminText}`
         await editMessage(chatId, messageId, report, menus.backToMain)
+      }
+      else if (data === 'menu_health') {
+        await editMessage(chatId, messageId, '⏳ Đang kiểm tra sức khỏe hệ thống...')
+        const healthReport = await getHealthReport(request.nextUrl.origin)
+        await editMessage(chatId, messageId, healthReport, menus.backToMain)
+      }
+      else if (data === 'menu_protect') {
+        const setting = await prisma.siteSetting.findUnique({ where: { key: 'protect_mode' } })
+        const currentMode = setting?.value === 'true'
+        const newMode = !currentMode
+        
+        await prisma.siteSetting.upsert({
+          where: { key: 'protect_mode' },
+          update: { value: newMode.toString() },
+          create: { key: 'protect_mode', value: newMode.toString() }
+        })
+        
+        if (newMode) {
+          await editMessage(chatId, messageId, '🔴 <b>ĐÃ BẬT PROTECT MODE</b>\n\nToàn bộ người dùng hiện đã bị chặn và chuyển sang màn hình Bảo vệ. Website đang ở trạng thái an toàn nhất trước DDoS.', menus.backToMain)
+        } else {
+          await editMessage(chatId, messageId, '⏳ <b>Đang kiểm tra kết nối và tình trạng hệ thống...</b>\nXin đợi trong giây lát để hoàn tất Post-Attack Check.')
+          const healthReport = await getHealthReport(request.nextUrl.origin)
+          await editMessage(chatId, messageId, `🟢 <b>ĐÃ TẮT PROTECT MODE</b>\n\nHệ thống đã mở lại bình thường.\n\n${healthReport}`, menus.backToMain)
+        }
       }
       else if (data === 'menu_ai') {
         const today = new Date()

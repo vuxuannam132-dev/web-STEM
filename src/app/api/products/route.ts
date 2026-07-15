@@ -4,6 +4,8 @@ import { getSession } from '@/lib/auth'
 import { productSchema } from '@/lib/validations'
 import { slugify } from '@/lib/constants'
 
+export const revalidate = 15 // Cache GET requests for 15 seconds to improve speed and prevent DDoS on DB
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

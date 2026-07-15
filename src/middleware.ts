@@ -63,9 +63,43 @@ export async function middleware(request: NextRequest) {
              request.headers.get('x-real-ip') || 
              'unknown'
 
+  // ========== Security Headers ==========
+  const response = NextResponse.next()
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+
+  // ========== PROTECT MODE CHECK ==========
+  // Skip protect mode check for telegram webhook, health check, and protect page itself
+  if (
+    !pathname.startsWith('/api/webhook/telegram') &&
+    !pathname.startsWith('/api/health') &&
+    !pathname.startsWith('/api/settings/protect') &&
+    pathname !== '/protect'
+  ) {
+    try {
+      const protectRes = await fetch(`${request.nextUrl.origin}/api/settings/protect`, { 
+        next: { revalidate: 10 } 
+      })
+      if (protectRes.ok) {
+        const { protectMode } = await protectRes.json()
+        if (protectMode) {
+          if (pathname.startsWith('/api/')) {
+            return NextResponse.json({ error: 'System is under High Protection Mode.' }, { status: 503 })
+          }
+          return NextResponse.redirect(new URL('/protect', request.url))
+        }
+      }
+    } catch (e) {
+      // Fallback silently if fetch fails
+    }
+  }
+
   // ========== Global Device Ban Check ==========
-  // Skip check for webhook, check-ban API, and the banned page itself
+  // Skip check for webhook, check-ban API, and the banned/protect pages
   if (!pathname.startsWith('/banned') && 
+      !pathname.startsWith('/protect') &&
       !pathname.startsWith('/api/webhook') && 
       !pathname.startsWith('/api/auth/check-ban')) {
     
@@ -76,11 +110,9 @@ export async function middleware(request: NextRequest) {
         if (banRes.ok) {
           const data = await banRes.json()
           if (Array.isArray(data.blocked) && data.blocked.includes(deviceId)) {
-            // If it's an API request, return 403
             if (pathname.startsWith('/api/')) {
               return NextResponse.json({ error: 'Thiết bị của bạn đã bị chặn vĩnh viễn.' }, { status: 403 })
             }
-            // Otherwise redirect to /banned
             return NextResponse.redirect(new URL('/banned', request.url))
           }
         }
@@ -93,7 +125,7 @@ export async function middleware(request: NextRequest) {
   // ========== Anti-Bot: Block suspicious user agents ==========
   const ua = request.headers.get('user-agent') || ''
   const botPatterns = /bot|crawler|spider|scraper|curl|wget|python-requests|go-http|java\/|php\//i
-  if (botPatterns.test(ua) && !pathname.startsWith('/api/cron')) {
+  if (botPatterns.test(ua) && !pathname.startsWith('/api/cron') && !pathname.startsWith('/api/webhook/telegram')) {
     return NextResponse.json(
       { error: 'Access denied' },
       { status: 403 }
@@ -101,7 +133,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ========== Rate Limiting for API routes ==========
-  if (pathname.startsWith('/api/')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhook/telegram')) {
     if (pathname.startsWith('/api/auth/')) {
       if (isAuthRateLimited(ip)) {
         return NextResponse.json({ error: 'Quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.' }, { status: 429 })
@@ -130,9 +162,19 @@ export async function middleware(request: NextRequest) {
     } catch { return NextResponse.redirect(new URL('/login', request.url)) }
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|images|favicon).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images/ (public images)
+     * - public assets (svg, png, jpg, jpeg, gif, webp)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|images|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
