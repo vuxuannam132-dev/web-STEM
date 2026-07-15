@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 @theme {
@@ -12,7 +12,7 @@
   --font-sans: 'Inter', system-ui, sans-serif;
 }
 
-/* Base styles — Light Mode */
+/* Base styles â€” Light Mode */
 body {
   font-family: var(--font-inter), system-ui, sans-serif;
   background: #f8fafc;
@@ -21,7 +21,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Glass Card — Light Mode */
+/* Glass Card â€” Light Mode */
 .glass-card {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px) url(#distorsion);
@@ -49,7 +49,7 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
-/* Glass Navigation — Dark (stays dark on hero) */
+/* Glass Navigation â€” Dark (stays dark on hero) */
 .glass-nav {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(24px) url(#distorsion);
@@ -60,7 +60,7 @@ body {
     0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-/* Glass Button — Enhanced shadow for visibility */
+/* Glass Button â€” Enhanced shadow for visibility */
 .glass-btn {
   position: relative;
   overflow: hidden;
@@ -151,7 +151,7 @@ body {
   color: #1e293b;
 }
 
-/* Status Badges — Light mode */
+/* Status Badges â€” Light mode */
 .badge-pending {
   background: rgba(245, 158, 11, 0.1);
   color: #d97706;
@@ -170,7 +170,7 @@ body {
   border: 1px solid rgba(220, 38, 38, 0.2);
 }
 
-/* Hero section — keeps dark gradient */
+/* Hero section â€” keeps dark gradient */
 .hero-dark {
   background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 25%, #1e40af 50%, #4c1d95 75%, #0f172a 100%);
   color: white;
@@ -221,7 +221,7 @@ body {
   animation: hero-text 0.8s ease-out 0.4s both;
 }
 
-/* Scrollbar — Light */
+/* Scrollbar â€” Light */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -357,6 +357,6 @@ body {
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }@ k e y f r a m e s   s c a n   {   0 %   {   t o p :   0 % ;   }   5 0 %   {   t o p :   1 0 0 % ;   }   1 0 0 %   {   t o p :   0 % ;   }   }  
- . a n i m a t e - s c a n   {   a n i m a t i o n :   s c a n   2 s   l i n e a r   i n f i n i t e ;   }  
- 
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+@keyframes scan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+.animate-scan { animation: scan 2s linear infinite; }
