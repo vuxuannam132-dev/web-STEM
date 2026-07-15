@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8828705964:AAFTVrQrj2skrLCwVjnCiZax0Nex67wsq84'
@@ -210,6 +211,22 @@ export async function POST(request: NextRequest) {
         const healthReport = await getHealthReport(request.nextUrl.origin)
         await reply(chatId, healthReport)
         await reply(chatId, '🌟 <b>MENU QUẢN TRỊ VIÊN</b> 🌟\n\nXin chào, Admin! Chọn một chức năng bên dưới:', menus.main)
+      } else if (text === '/revert') {
+        await prisma.siteSetting.upsert({
+          where: { key: 'brand_mask_mode' },
+          update: { value: 'false' },
+          create: { key: 'brand_mask_mode', value: 'false' }
+        })
+        revalidatePath('/', 'layout')
+        await reply(chatId, `✅ <b>Đã KHÔI PHỤC thương hiệu!</b>\n\nLogo, bản quyền và tên trường "THPT Đoàn Kết-Hai Bà Trưng" đã hiển thị trở lại trên toàn hệ thống.`)
+      } else if (text === '/mask') {
+        await prisma.siteSetting.upsert({
+          where: { key: 'brand_mask_mode' },
+          update: { value: 'true' },
+          create: { key: 'brand_mask_mode', value: 'true' }
+        })
+        revalidatePath('/', 'layout')
+        await reply(chatId, `🔒 <b>Đã ẨN thương hiệu!</b>\n\nWebsite hiện đang hoạt động dưới thương hiệu tạm thời "Trường Mầm non DCschool".`)
       } else if (text.startsWith('/setemail ')) {
         const newEmail = text.replace('/setemail ', '').trim()
         await prisma.siteSetting.upsert({

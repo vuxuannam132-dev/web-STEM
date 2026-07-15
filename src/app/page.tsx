@@ -9,7 +9,10 @@ import SearchFilter from '@/components/products/SearchFilter'
 import ProductPost from '@/components/products/ProductPost'
 import { Loader2, Inbox } from 'lucide-react'
 
+import { useBrand } from '@/components/providers/BrandProvider'
+
 export default function HomePage() {
+  const brand = useBrand()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [products, setProducts] = useState<any[]>([])
@@ -64,20 +67,22 @@ export default function HomePage() {
 
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="animate-hero-text">
-            <div className="flex justify-center mb-6">
-              <Image 
-                src="/logo1.jpg"
-                alt="Logo THPT Đoàn Kết"
-                width={80}
-                height={80}
-                className="rounded-full shadow-2xl shadow-blue-500/20"
-              />
-            </div>
+            {brand.logo && (
+              <div className="flex justify-center mb-6">
+                <Image 
+                  src={brand.logo}
+                  alt={`Logo ${brand.shortName}`}
+                  width={80}
+                  height={80}
+                  className="rounded-full shadow-2xl shadow-blue-500/20"
+                />
+              </div>
+            )}
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white via-blue-200 to-violet-200 bg-clip-text text-transparent leading-tight">
               Website Giới Thiệu Sản Phẩm STEM
             </h1>
             <p className="text-lg md:text-xl text-blue-200/80 mt-2 font-medium">
-              Trường THPT Đoàn Kết-Hai Bà Trưng
+              {brand.name}
             </p>
           </div>
           

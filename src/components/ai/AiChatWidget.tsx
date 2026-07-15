@@ -51,9 +51,11 @@ const codeHelpers = [
 ]
 
 import { usePathname } from 'next/navigation'
+import { useBrand } from '@/components/providers/BrandProvider'
 
 export default function AiChatWidget() {
   const pathname = usePathname()
+  const brand = useBrand()
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -315,7 +317,7 @@ export default function AiChatWidget() {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-white font-bold text-sm">AI Trợ lý STEM</h4>
-              <p className="text-white/50 text-xs truncate">THPT Đoàn Kết-Hai Bà Trưng</p>
+              <p className="text-white/50 text-xs truncate">{brand?.shortName || 'Trường học'}</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1">

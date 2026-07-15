@@ -10,8 +10,10 @@ import GlassInput from '@/components/ui/GlassInput'
 import GlassCard from '@/components/ui/GlassCard'
 import toast from 'react-hot-toast'
 import { CheckCircle2, Mail, RefreshCw } from 'lucide-react'
+import { useBrand } from '@/components/providers/BrandProvider'
 
 export default function RegisterPage() {
+  const brand = useBrand()
   const router = useRouter()
   const { refetch } = useAuth()
 
@@ -141,17 +143,19 @@ export default function RegisterPage() {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <GlassCard className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Image
-            src="/logo1.jpg"
-            alt="Logo"
-            width={80}
-            height={80}
-            className="mx-auto rounded-full mb-4"
-          />
+          {brand.logo && (
+            <Image
+              src={brand.logo}
+              alt={`Logo ${brand.shortName}`}
+              width={80}
+              height={80}
+              className="mx-auto rounded-full mb-4"
+            />
+          )}
           <h1 className="text-2xl font-bold text-slate-900">
             {showOtp ? 'Xác thực Email' : 'Đăng ký tài khoản'}
           </h1>
-          <p className="text-slate-500 text-sm mt-1">STEM Đoàn Kết-Hai Bà Trưng</p>
+          <p className="text-slate-500 text-sm mt-1">{brand.name}</p>
         </div>
 
         {/* Registration Form */}

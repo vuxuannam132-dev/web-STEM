@@ -3,14 +3,16 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useBrand } from '@/components/providers/BrandProvider'
 import GlassButton from '@/components/ui/GlassButton'
 import GlassInput from '@/components/ui/GlassInput'
 import GlassCard from '@/components/ui/GlassCard'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
+  const brand = useBrand()
   const router = useRouter()
   const { refetch } = useAuth()
   const [email, setEmail] = useState('')
@@ -131,15 +133,17 @@ export default function LoginPage() {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <GlassCard className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Image
-            src="/logo1.jpg"
-            alt="Logo"
-            width={80}
-            height={80}
-            className="mx-auto rounded-full mb-4"
-          />
+          {brand.logo && (
+            <Image
+              src={brand.logo}
+              alt={`Logo ${brand.shortName}`}
+              width={80}
+              height={80}
+              className="mx-auto rounded-full mb-4"
+            />
+          )}
           <h1 className="text-2xl font-bold text-slate-900">Đăng nhập</h1>
-          <p className="text-slate-500 text-sm mt-1">STEM Đoàn Kết-Hai Bà Trưng</p>
+          <p className="text-slate-500 text-sm mt-1">{brand.name}</p>
         </div>
 
         {!requires2FA ? (
