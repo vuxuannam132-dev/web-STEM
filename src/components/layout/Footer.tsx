@@ -39,10 +39,8 @@ export default function Footer() {
                     <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-1.11 9-5.53 9-10.95z"/>
                   </svg>
                 </a>
-                <a href="https://zalo.me/0708393751" target="_blank" rel="noopener noreferrer" className="p-2 bg-blue-50 text-blue-500 rounded-full hover:bg-blue-100 transition-colors" title="Zalo Admin">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                    <path d="M21.54 11.13c0-4.66-4.5-8.42-10.04-8.42S1.46 6.47 1.46 11.13c0 4.14 3.52 7.61 8.24 8.28v3.29c0 .41.45.65.81.42l4.28-2.61c.42-.25.86-.41 1.33-.46 3.01-.36 5.42-2.73 5.42-5.74V11.13z"/>
-                  </svg>
+                <a href="https://zalo.me/0708393751" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform" title="Zalo Admin">
+                  <img src="/zalo-logo.png" alt="Zalo" className="w-9 h-9 object-contain" />
                 </a>
               </div>
             </div>
