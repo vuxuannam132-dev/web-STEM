@@ -19,6 +19,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [ieltsConfig, setIeltsConfig] = useState({ show: false, url: '' })
+  const [heroBgImage, setHeroBgImage] = useState("")
 
   useEffect(() => {
     fetch('/api/settings')
@@ -26,6 +27,9 @@ export default function HomePage() {
       .then(data => {
         if (data.show_ielts_link === 'true' && data.ielts_link_url) {
           setIeltsConfig({ show: true, url: data.ielts_link_url })
+        }
+        if (data.hero_background_image) {
+          setHeroBgImage(data.hero_background_image)
         }
       })
       .catch(console.error)
@@ -59,11 +63,25 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section — Dark gradient preserved */}
-      <section className="hero-dark relative py-20 px-4 text-center -mt-24 pt-32 pb-16 overflow-hidden">
-        {/* Decorative orbs */}
-        <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4 w-[500px] h-[500px] bg-violet-500/20 rounded-full blur-[120px] pointer-events-none" />
+      {/* Hero Section */}
+      <section className={`relative py-20 px-4 text-center -mt-24 pt-32 pb-16 overflow-hidden ${!heroBgImage ? 'hero-dark' : ''}`}>
+        {heroBgImage && (
+          <>
+            <div 
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${heroBgImage})` }}
+            />
+            <div className="absolute inset-0 z-0 backdrop-blur-sm bg-black/60" />
+          </>
+        )}
+
+        {!heroBgImage && (
+          <>
+            {/* Decorative orbs */}
+            <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4 w-[500px] h-[500px] bg-violet-500/20 rounded-full blur-[120px] pointer-events-none" />
+          </>
+        )}
 
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="animate-hero-text">

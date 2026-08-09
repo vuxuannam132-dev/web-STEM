@@ -15,6 +15,8 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [resetTarget, setResetTarget] = useState('ALL');
   const [isResetting, setIsResetting] = useState(false);
+  const [heroBgImage, setHeroBgImage] = useState("");
+  const [isUploadingBg, setIsUploadingBg] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -31,6 +33,7 @@ export default function SettingsPage() {
         if (data.blocked_devices) {
           try { setBlockedDevices(JSON.parse(data.blocked_devices)); } catch (e) {}
         }
+        if (data.hero_background_image) setHeroBgImage(data.hero_background_image);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -123,6 +126,34 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUploadBg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingBg(true);
+    const formData = new FormData();
+    formData.append('files', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const uploadData = await res.json();
+      if (uploadData.urls && uploadData.urls.length > 0) {
+        const url = uploadData.urls[0];
+        setHeroBgImage(url);
+        await saveSetting('hero_background_image', url);
+        alert('Đã cập nhật ảnh nền thành công!');
+      } else {
+        alert('Lỗi khi tải ảnh lên');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối khi tải ảnh lên');
+    }
+    setIsUploadingBg(false);
+  };
+
   const handleSaveAdminEmail = async () => {
     setIsSaving(true);
     await saveSetting("admin_otp_email", adminOtpEmail);
@@ -161,6 +192,31 @@ export default function SettingsPage() {
     <div className="p-8 max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">Cài đặt Hệ thống</h1>
       
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+        <h2 className="text-xl font-semibold mb-4 text-gray-700">Ảnh nền trang chủ (Hero Background)</h2>
+        
+        <div className="py-4">
+          <label className="block font-medium text-gray-800 mb-2">Tải lên ảnh nền mới</label>
+          <p className="text-sm text-gray-500 mb-4">Ảnh sẽ được làm mờ nhẹ và tự động thay đổi kích thước để hiển thị tốt nhất trên mọi thiết bị.</p>
+          <div className="flex gap-4 items-center">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleUploadBg}
+              disabled={isUploadingBg}
+              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {isUploadingBg && <span className="text-sm text-blue-600 font-medium">Đang tải lên...</span>}
+          </div>
+          {heroBgImage && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Ảnh nền hiện tại:</p>
+              <img src={heroBgImage} alt="Hero Background" className="w-full max-w-md rounded-lg shadow-sm border object-cover" />
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h2 className="text-xl font-semibold mb-4 text-gray-700">Liên kết sang Web IELTS</h2>
         
