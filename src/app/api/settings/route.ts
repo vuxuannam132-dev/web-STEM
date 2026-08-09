@@ -11,7 +11,7 @@ export async function GET() {
 
     const settings = await prisma.siteSetting.findMany();
     
-    const publicKeys = ['show_ielts_link', 'ielts_link_url'];
+    const publicKeys = ['show_ielts_link', 'ielts_link_url', 'hero_background_image'];
     
     const settingsMap = settings.reduce((acc: Record<string, string>, setting: any) => {
       if (isAdmin || publicKeys.includes(setting.key)) {

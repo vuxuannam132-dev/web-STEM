@@ -71,7 +71,7 @@ export default function HomePage() {
               className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
               style={{ backgroundImage: `url(${heroBgImage})` }}
             />
-            <div className="absolute inset-0 z-0 backdrop-blur-sm bg-black/60" />
+            <div className="absolute inset-0 z-0 backdrop-blur-sm bg-black/30" />
           </>
         )}
 
