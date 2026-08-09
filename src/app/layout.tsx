@@ -57,7 +57,7 @@ export default async function RootLayout({
     name: 'Trường THPT Đoàn Kết-Hai Bà Trưng',
     shortName: 'THPT Đoàn Kết',
     logo: '/logo1.jpg',
-    copyright: '© 2026 Dev by Vũ Xuân Nam D2K64 trường THPT Đoàn Kết-Hai Bà Trưng kính tặng!',
+    copyright: 'Web do học sinh Vũ Xuân Nam D2K64 Trường THPT Đoàn Kết-Hai Bà Trưng kính tặng!',
     address: 'Địa chỉ: Số 174 Hồng Mai, phường Quỳnh Lôi, quận Hai Bà Trưng, thành phố Hà Nội.'
   }
 
