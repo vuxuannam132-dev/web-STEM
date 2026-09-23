@@ -110,9 +110,15 @@ async function getBotConfig() {
       try { 
         const parsed = JSON.parse(s.value) 
         if (Array.isArray(parsed)) adminIds = parsed.map(String)
-      } catch (e) {}
+        else if (typeof parsed === 'string' && parsed.length > 0) adminIds = [parsed]
+      } catch (e) {
+        // Nếu JSON.parse lỗi, thử dùng giá trị thô
+        const raw = s.value.trim()
+        if (raw.length > 0) adminIds = [raw]
+      }
     }
   }
+  console.log('[TelegramBot] getBotConfig → adminIds:', adminIds)
   return { password, adminIds }
 }
 
@@ -120,7 +126,12 @@ async function auth(chatId: number, text?: string): Promise<boolean> {
   const conf = await getBotConfig()
   const chatStr = String(chatId)
   
-  if (conf.adminIds.includes(chatStr)) return true
+  console.log(`[TelegramBot] auth check → chatId: ${chatStr}, adminIds: ${JSON.stringify(conf.adminIds)}`)
+  
+  if (conf.adminIds.includes(chatStr)) {
+    console.log(`[TelegramBot] auth → PASSED for chatId: ${chatStr}`)
+    return true
+  }
   
   if (text === conf.password) {
     conf.adminIds.push(chatStr)
@@ -129,6 +140,7 @@ async function auth(chatId: number, text?: string): Promise<boolean> {
       update: { value: JSON.stringify(conf.adminIds) },
       create: { key: 'telegram_admin_ids', value: JSON.stringify(conf.adminIds) }
     })
+    console.log(`[TelegramBot] auth → NEW ADMIN registered: ${chatStr}, all admins: ${JSON.stringify(conf.adminIds)}`)
     
     const persistentKeyboard = {
       keyboard: [
@@ -153,6 +165,7 @@ async function auth(chatId: number, text?: string): Promise<boolean> {
     return false // Mới xác thực xong, không xử lý tiếp lệnh hiện tại
   }
   
+  console.log(`[TelegramBot] auth → DENIED for chatId: ${chatStr}`)
   await reply(chatId, '⛔ <b>Bạn không phải admin và không có quyền sử dụng bot.</b>\n\nVui lòng nhập mật khẩu để truy cập:')
   return false
 }
@@ -164,6 +177,19 @@ export async function POST(request: NextRequest) {
     if (body.message && body.message.text) {
       const chatId = body.message.chat.id
       const text = body.message.text.trim()
+
+      // Lệnh debug không cần auth - để chẩn đoán khi bị khóa
+      if (text === '/debug') {
+        const conf = await getBotConfig()
+        const chatStr = String(chatId)
+        const isAdmin = conf.adminIds.includes(chatStr)
+        await reply(chatId, `🔍 <b>DEBUG INFO</b>\n\n` +
+          `📌 Chat ID của bạn: <code>${chatStr}</code>\n` +
+          `🔑 Admin IDs trong DB: <code>${JSON.stringify(conf.adminIds)}</code>\n` +
+          `✅ Trạng thái: ${isAdmin ? 'ĐÃ XÁC THỰC ✅' : 'CHƯA XÁC THỰC ❌'}\n\n` +
+          `Nếu chưa xác thực, nhập mật khẩu để đăng ký lại.`)
+        return NextResponse.json({ ok: true })
+      }
 
       const isAuthed = await auth(chatId, text)
       if (!isAuthed) return NextResponse.json({ ok: true })
